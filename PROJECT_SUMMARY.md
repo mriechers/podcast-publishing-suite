@@ -326,12 +326,62 @@ Full risk assessment: `docs/AUTOMATION_DESIGN.md` (page 18)
 
 ---
 
+## TTBOOK.org Content Cache (Luminous Series)
+
+**Status:** Scraped & Archived ✅
+**Date:** December 10, 2025
+**Reason:** TTBOOK.org website will be going away; content preserved for enrichment.
+
+### What's Cached
+
+The `sample-data/ttbook-cache/luminous/` directory contains scraped content from all 18 Luminous podcast episode pages:
+
+| Content Type | Files | Notes |
+|--------------|-------|-------|
+| **Transcripts** | 18 `.txt` files | Full episode transcripts with speaker attribution |
+| **Raw HTML** | 18 `.html` files | Complete page HTML for future parsing |
+| **JSON Data** | 18 `.json` files | Structured data: metadata, interviews, markdown |
+| **Series Landing** | 1 file | `_series_landing.json` |
+| **Manifest** | 1 file | `_manifest.json` with index of all episodes |
+
+**Total Size:** ~8.5MB
+
+### Matching RSS to Cache
+
+The PRX RSS feed `<link>` element maps directly to cached files:
+
+```
+RSS: <link>https://www.ttbook.org/show/luminous-what-can-psychedelics-teach-us-about-dying</link>
+                                     ↓
+                        Extract slug from URL path
+                                     ↓
+Cache: sample-data/ttbook-cache/luminous/luminous-what-can-psychedelics-teach-us-about-dying.json
+```
+
+### Data Available for Enrichment
+
+Each cached episode includes content NOT in the RSS feed:
+- **Full transcript** - Formatted with speaker names (e.g., `- [Steve] ...`)
+- **Interview segments** - Links and titles of individual interview portions
+- **Page metadata** - Air dates, descriptions, categories
+
+### Scraper Script
+
+To re-run or extend the scrape:
+```bash
+python3.11 scripts/scrape_ttbook_luminous.py
+```
+
+**Note:** This cache should be preserved during development. Once TTBOOK.org goes offline, this is the only source for transcripts and enriched metadata.
+
+---
+
 ## Future Enhancements
 
 ### Phase 2 (After MVP)
-- [ ] Transcript support (if available in feed)
+- [ ] Transcript support (from TTBOOK cache for Luminous episodes)
 - [ ] Chapter markers → post sections with headings
-- [ ] Guest names → automatic tags
+- [ ] Guest names → automatic tags (extractable from cached interview data)
 - [ ] Social share image generation
 - [ ] Related episode links
 
@@ -373,7 +423,20 @@ scripts/
 ├── scrape_ghost_docs.py (initial scraper, deprecated)
 ├── fetch_ghost_docs_from_github.py (✅ working doc fetcher)
 ├── analyze_prx_feed.py (RSS analysis tool)
-└── fetch_prx_feed_crawl4ai.py (browser-based feed fetcher)
+├── fetch_prx_feed_crawl4ai.py (browser-based feed fetcher)
+└── scrape_ttbook_luminous.py (✅ TTBOOK content archiver)
+```
+
+### Sample Data / Cached Content
+```
+sample-data/
+└── ttbook-cache/
+    └── luminous/
+        ├── _manifest.json (episode index)
+        ├── _series_landing.json (series page)
+        ├── {episode-slug}.json (18 files - full data)
+        ├── {episode-slug}.html (18 files - raw HTML)
+        └── {episode-slug}_transcript.txt (18 files - clean transcripts)
 ```
 
 ### Project Files
