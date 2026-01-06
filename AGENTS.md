@@ -1,224 +1,297 @@
-# Agent Architecture
+# Agent Instructions
 
-This document describes the agent roles, responsibilities, and collaboration patterns for projects derived from this template.
+This document provides project-specific guidance for AI agents working with the PRX-to-Ghost Publisher codebase.
 
-## Template-Specific Agents
+## Repository Purpose
 
-This template repository defines specialized agents to assist with knowledge capture, project scaffolding, workspace organization, and template maintenance.
+**PRX-to-Ghost Publisher** is an automated publishing system that monitors PRX Dovetail RSS feeds for new podcast episodes and automatically creates posts on Ghost CMS with embedded PRX audio players. It handles multiple podcasts publishing to a single Ghost site with proper routing and organization.
 
-### janitor
+**Target Podcasts:**
+- **Luminous** (`https://f.prxu.org/3329/feed-rss.xml`) → `/luminous/`
+- **Wonder Cabinet** (`https://f.prxu.org/120/ttbook`) → `/wonder-cabinet/`
 
-**Purpose**: Maintain clean and organized directory structure, creating workspace for agents and keeping the project tidy without disrupting active work.
+**Ghost Site:** [Wonder Cabinet Productions](https://wondercabinetproductions.com/)
 
-**Capabilities**:
-- Create and maintain standard subdirectories (`knowledge/`, `brainstorming/`, `artifacts/`)
-- Organize misplaced files into appropriate locations
-- Check dependencies before moving or deleting files
-- Archive outdated content while preserving history
-- Create workspace for agents that need dedicated directories
-- Update documentation when structure changes
+## Git Commit Convention
 
-**When to Invoke**:
-- Project workspace becoming cluttered or disorganized
-- Agent needs dedicated workspace for task
-- Preparing project for handoff or review
-- Regular scheduled cleanup operations
-- Before major refactoring or architectural changes
+**IMPORTANT**: This project follows workspace-wide commit conventions with agent attribution.
 
-**Example Invocation**:
+**See:** `/Users/mriechers/Developer/the-lodge/conventions/COMMIT_CONVENTIONS.md`
+
+**Quick Reference:** All AI-generated commits must include `[Agent: <name>]` after the subject line.
+
+Example:
 ```
-The project has accumulated a lot of temporary files. Can you organize everything into
-appropriate subdirectories and safely clean up anything that's no longer needed?
-```
+feat: Add PRX player embedding to episode transformer
 
-### crawl4ai-knowledge-harvester
+[Agent: Main Assistant]
 
-**Purpose**: Expert in Crawl4AI workflows, documentation harvesting, and knowledge base curation.
+Implemented PRX audio player embedding using the episode GUID
+to generate the correct embed URL. Updated transformer to include
+player HTML in Ghost post content.
 
-**Capabilities**:
-- Configure and run `scripts/crawl_docs.py` with appropriate filters
-- Design effective source categorization and slug naming schemes
-- Troubleshoot Crawl4AI installation and Playwright issues
-- Optimize crawl patterns for different documentation structures
-- Maintain `knowledge/sources.json` integrity
-- Advise on incremental crawl strategies
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
-**When to Invoke**:
-- Setting up initial documentation sources for a new project
-- Troubleshooting failed crawls or missing content
-- Redesigning knowledge base taxonomy
-- Establishing refresh schedules for documentation snapshots
-
-**Example Invocation**:
-```
-Please help me set up Crawl4AI to harvest the React documentation and Tailwind CSS docs
-into the knowledge base, organized by framework.
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 ```
 
-### agent-bootstrap-guide
+## Project Architecture
 
-**Purpose**: Guide new projects through the template adoption process, ensuring all setup steps are completed correctly.
-
-**Capabilities**:
-- Walk through the three-step bootstrap process (docs/bootstrap.md)
-- Verify Python 3.11 environment and Crawl4AI installation
-- Initialize `knowledge/sources.json` with project-specific sources
-- Update README.md, AGENTS.md, and CLAUDE.md for project context
-- Configure git hooks and workspace conventions
-- Validate compliance with workspace infrastructure requirements
-
-**When to Invoke**:
-- Starting a new project from this template
-- Onboarding new team members to a template-derived project
-- Auditing whether all bootstrap steps were completed
-- Troubleshooting template setup issues
-
-**Example Invocation**:
-```
-I just created a new repo from the template. Please guide me through the bootstrap process
-for a project that will build a Slack bot integration.
-```
-
-### template-maintainer
-
-**Purpose**: Maintain and improve this template repository to reflect evolving workspace conventions and best practices.
-
-**Capabilities**:
-- Audit template compliance with workspace infrastructure requirements
-- Update template files when workspace conventions change
-- Review and enhance documentation (README, CLAUDE.md, AGENTS.md, bootstrap.md)
-- Improve scripts and automation tools
-- Track template adoption across projects
-- Identify common customization patterns for inclusion in template
-
-**When to Invoke**:
-- Workspace conventions have been updated
-- Multiple projects request similar template enhancements
-- Quarterly template maintenance and review
-- Preparing template for external publication or sharing
-
-**Example Invocation**:
-```
-Workspace conventions now require a .claude/settings/ directory. Please update the template
-to include this and document it in CLAUDE.md.
-```
-
-## Agent Collaboration Patterns
-
-### Knowledge Capture Workflow
-
-1. **agent-bootstrap-guide** initializes the project structure
-2. **janitor** creates organized directory structure for project needs
-3. **crawl4ai-knowledge-harvester** sets up documentation sources
-4. **Main Assistant** performs primary development using captured knowledge
-5. **janitor** maintains workspace organization as project evolves
-6. **code-reviewer** validates implementation quality
-7. **template-maintainer** (if working in template repo) captures learnings for future projects
-
-### Bootstrap Sequence
-
-When starting a new project:
+### System Components
 
 ```
-User → agent-bootstrap-guide: "Set up new project for [domain]"
-  ↓
-agent-bootstrap-guide: Verifies environment, creates structure
-  ↓
-agent-bootstrap-guide → crawl4ai-knowledge-harvester: "Configure sources for [domain]"
-  ↓
-crawl4ai-knowledge-harvester: Sets up knowledge base
-  ↓
-agent-bootstrap-guide: Updates project documentation
-  ↓
-agent-bootstrap-guide → User: "Setup complete, ready for development"
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Trigger Layer  │───>│ Processing Core │───>│  Output Layer   │
+│ - GitHub Cron   │    │ - Feed Fetcher  │    │ - Ghost Client  │
+│ - Manual Invoke │    │ - State Manager │    │ - State Commit  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### Template Evolution
+**Platform:** GitHub Actions (every 30 minutes)
+**State:** Git-tracked JSON file
+**Cost:** $0/month (runs on GitHub Actions free tier)
 
-Improvements flow back to the template:
+### Core Modules
+
+- **FeedFetcher**: Retrieves PRX RSS feeds with fallback strategies (direct access, RSS2JSON proxy, Cloudflare bypass)
+- **StateManager**: Manages GUID tracking with atomic writes to prevent duplicate publishing
+- **EpisodeTransformer**: Converts RSS items to Ghost post format with PRX player embedding
+- **GhostPublisher**: Publishes posts to Ghost CMS using Admin API with JWT authentication
+
+### Key Features
+
+- **Multi-feed support** - Process multiple podcast feeds independently
+- **PRX player embedding** - Embed audio players directly in Ghost posts
+- **Duplicate prevention** - GUID-based tracking prevents republishing
+- **Graceful degradation** - Feed isolation ensures one failure doesn't affect others
+- **Zero infrastructure cost** - Runs on GitHub Actions free tier
+- **Transcript enrichment** - TTBOOK.org content cached for Luminous episodes
+
+## Development Roadmap
+
+See `README.md` for complete development roadmap.
+
+**Current Status:** Design Complete, Ready for Implementation
+
+### Implementation Phases
+
+1. **Prerequisites** - User provides PRX feed URLs, Ghost API keys, creates Ghost tags
+2. **Theme Setup** - Add podcast templates, modify homepage, configure routing
+3. **Publisher Core** - Implement feed fetcher, state manager, transformer, publisher
+4. **Testing & Go-Live** - Test with real feeds, verify functionality, enable automation
+
+## Python Environment Setup
+
+**Required:** Python 3.11+
+
+```bash
+# Create virtual environment
+python3.11 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies (when requirements.txt exists)
+pip install -r requirements.txt
+```
+
+**IMPORTANT:** This project must use a virtual environment. Do not install packages to system Python.
+
+## Environment Variables
+
+Secrets are stored in macOS Keychain (service: `developer.workspace.<KEY_NAME>`).
+
+**See:** `/Users/mriechers/Developer/the-lodge/conventions/SECRETS_MANAGEMENT.md`
+
+Required secrets:
+- `GHOST_URL` - Ghost site URL (https://wondercabinetproductions.com)
+- `GHOST_ADMIN_KEY` - Ghost Admin API integration key
+- `RSS2JSON_API_KEY` - Optional API key for RSS2JSON fallback service
+
+**Retrieve secrets in Python:**
+```python
+from scripts.keychain_secrets import get_secret
+
+ghost_url = get_secret("GHOST_URL")
+ghost_key = get_secret("GHOST_ADMIN_KEY")
+```
+
+**Never commit secrets to the repository.**
+
+## Key Documentation
+
+| Document | Description |
+|----------|-------------|
+| `docs/COMPREHENSIVE_DESIGN.md` | Full system design with multi-feed architecture, Ghost routing, and implementation details |
+| `docs/AUTOMATION_DESIGN.md` | Architecture options, data flow, error handling, and cost analysis |
+| `docs/PRX_FEED_ACCESS_SOLUTIONS.md` | Solutions for accessing PRX feeds (RSS2JSON proxy, Cloudflare bypass) |
+| `docs/GITHUB_ORG_HANDOFF.md` | Guide for transferring repository to client organization |
+
+## Repository Structure
 
 ```
-Project discovers pain point or missing feature
-  ↓
-Main Assistant implements solution in project
-  ↓
-Developer identifies pattern as generally useful
-  ↓
-template-maintainer: Evaluates for inclusion in template
-  ↓
-template-maintainer: Updates template repository
-  ↓
-Future projects benefit from improvement
+├── docs/                    # Design documents and guides
+├── knowledge/               # Reference documentation and API specs
+├── sample-data/             # Sample PRX feed data
+│   └── ttbook-cache/        # Archived TTBOOK.org transcripts
+├── scripts/                 # Automation scripts
+│   └── keychain_secrets.py  # Keychain secret retrieval
+├── .github/workflows/       # GitHub Actions automation
+└── brainstorming/           # Planning and research notes
 ```
 
-## Agent Development Guidelines
+## Development Guidelines
 
-When creating new project-specific agents for template-derived projects:
+### Code Quality Standards
 
-1. **Define Clear Boundaries**: Each agent should have distinct, non-overlapping responsibilities
-2. **Document Capabilities**: List specific tasks the agent can perform
-3. **Provide Invocation Examples**: Show how users should request agent assistance
-4. **Register with Workspace**: Use Agent Registrar to add agent to workspace registry
-5. **Create Agent Definition**: Add `.claude/agents/<agent-name>.md` file
-6. **Update This File**: Document agent in this AGENTS.md
+- **RSS Feed Parsing**: Use `feedparser` library for robust RSS parsing
+- **Ghost API**: Use official Ghost Admin API client or JWT-based requests
+- **Error Handling**: Implement graceful degradation - feed failures should not stop processing
+- **State Management**: Atomic writes to prevent corruption, always validate JSON before writing
+- **PRX Embedding**: Use episode GUID to construct embed URLs (format documented in `docs/COMPREHENSIVE_DESIGN.md`)
+- **Testing**: Include sample data in `sample-data/` for testing without live API calls
 
-## Workspace-Standard Agents
+### Ghost Content Requirements
+
+All published posts must include:
+- **Title** - Episode title from RSS
+- **Content** - Episode description + PRX player embed
+- **Tags** - Show tag (`luminous` or `wonder-cabinet`), routing tag (`#show-<name>`), and `Podcast`
+- **Custom Excerpt** - Episode summary for listing pages
+- **Featured Image** - Episode artwork from RSS enclosure
+
+### GitHub Actions Workflow
+
+- **Trigger**: Cron schedule (every 30 minutes) + manual dispatch
+- **Permissions**: Requires write access to repository for state commits
+- **Secrets**: Store Ghost API key and RSS2JSON key as GitHub repository secrets
+- **Notifications**: Log errors to workflow run, optionally send notifications on failure
+
+## Common Development Commands
+
+```bash
+# Run feed fetcher (when implemented)
+python scripts/fetch_feeds.py
+
+# Test episode transformation
+python scripts/test_transformer.py
+
+# Manually trigger publication
+python scripts/publish.py
+
+# Check state file integrity
+python scripts/validate_state.py
+```
+
+## Agent Collaboration
+
+### Workspace-Standard Agents
 
 These agents are available across all workspace projects:
 
-- **Main Assistant**: General development, bug fixes, refactoring
-- **code-reviewer**: Code review, architectural feedback, security audits
-- **librarian**: Repository health monitoring and workspace audits
-- **Agent Registrar**: Agent lifecycle management and registration
+- **Main Assistant** - General development, bug fixes, refactoring
+- **code-reviewer** - Code review, architectural feedback, security audits
+- **The Fixer** - Infrastructure setup and convention enforcement
+- **The Conductor** - Multi-agent orchestration and task coordination
 
-See `/Users/mriechers/Developer/workspace_ops/conventions/AGENT_REGISTRY.md` for complete workspace agent documentation.
+See `/Users/mriechers/Developer/the-lodge/conventions/AGENT_REGISTRY.md` for complete workspace agent documentation.
 
-## Agent Registration Process
+### Agent Registration
 
-To register a new agent for this project:
+To register a new project-specific agent:
 
 1. Create agent definition file in `.claude/agents/<agent-name>.md`
-2. Invoke Agent Registrar via Claude Code Task tool
-3. Agent Registrar will:
-   - Validate agent definition
-   - Update workspace AGENT_REGISTRY.md
-   - Update COMMIT_CONVENTIONS.md with new agent name
-   - Ensure cross-platform compatibility (Claude Code, Cursor, Copilot, etc.)
+2. Invoke Agent Registrar via Claude Code
+3. Agent Registrar will update workspace registries
 4. Update this AGENTS.md file with agent documentation
-5. Commit changes with appropriate agent attribution
+5. Commit changes with agent attribution
 
-## Evaluation and Testing
+## Git Hooks
 
-### Agent Effectiveness Metrics
+This repository uses workspace-wide git hooks from `/Users/mriechers/Developer/the-lodge/conventions/git-hooks/`.
 
-Track agent performance through:
-- **Invocation frequency**: How often is each agent used?
-- **Task completion rate**: Does agent successfully complete requested tasks?
-- **User satisfaction**: Does agent output meet expectations?
-- **Handoff efficiency**: How smoothly do agents collaborate?
+Configured in `.githooks/commit-msg` - delegates to workspace commit-msg hook for validation.
 
-### Testing Strategy
+Enable hooks:
+```bash
+git config core.hooksPath .githooks
+```
 
-- **Simulation harnesses**: Test agents with representative project scenarios
-- **Regression suites**: Ensure agents don't break existing workflows
-- **Knowledge base validation**: Verify crawled documentation quality
-- **Bootstrap repeatability**: New projects can successfully adopt template
+## Testing Strategy
 
-## Template Customization
+### Feed Fetching Tests
+- Test direct RSS access
+- Test RSS2JSON fallback
+- Test Cloudflare bypass strategy
+- Verify feed parsing with sample data
 
-When adapting this template for a specific project:
+### State Management Tests
+- Test atomic write operations
+- Test GUID deduplication
+- Test state file corruption recovery
+- Verify multi-feed isolation
 
-1. **Update this file** to reflect project-specific agent roles
-2. **Remove unused template agents** if not relevant to project
-3. **Add domain-specific agents** (e.g., aws-infrastructure-agent, frontend-specialist)
-4. **Document collaboration patterns** unique to your project
-5. **Maintain workspace compliance** while customizing for needs
+### Ghost Publishing Tests
+- Test JWT authentication
+- Test post creation with all required fields
+- Test tag assignment
+- Test duplicate post prevention
+
+### Integration Tests
+- End-to-end test with sample feeds
+- Verify GitHub Actions workflow
+- Test error handling and logging
+
+## Deployment
+
+### GitHub Actions Setup
+
+1. **Repository Secrets**: Add `GHOST_ADMIN_KEY` and `RSS2JSON_API_KEY` to repository secrets
+2. **Workflow File**: Create `.github/workflows/publish-episodes.yml`
+3. **State File**: Initialize empty `state.json` in repository
+4. **Enable Actions**: Ensure GitHub Actions are enabled for the repository
+
+### Ghost Theme Deployment
+
+1. **Download Theme**: Get current theme from Ghost admin
+2. **Add Templates**: Create `podcast.hbs` for show landing pages
+3. **Modify Homepage**: Update `index.hbs` for dual-show display
+4. **Create Routes**: Add `routes.yaml` for collection routing
+5. **Upload Theme**: Deploy modified theme to Ghost
+6. **Create Tags**: Ensure all required tags exist (`luminous`, `wonder-cabinet`, `#show-luminous`, `#show-wonder-cabinet`, `Podcast`)
+
+## Troubleshooting
+
+### Feed Access Issues
+- Check PRX feed URLs are accessible
+- Verify RSS2JSON API key if using fallback
+- Test Cloudflare bypass if direct access fails
+- Review sample data in `sample-data/` for expected feed structure
+
+### Ghost Publishing Issues
+- Verify Ghost Admin API key is valid
+- Check Ghost API rate limits (Ghost Standard tier may have limits)
+- Ensure required tags exist in Ghost
+- Verify routes.yaml is correctly configured
+
+### State Management Issues
+- Check state.json is valid JSON
+- Verify GitHub Actions has write permissions
+- Review git commit history for state changes
+- Ensure atomic write logic prevents corruption
+
+## Notes for Claude Code
+
+1. **Follow workspace conventions** - This project uses workspace-wide commit conventions, secrets management, and git hooks
+2. **Use virtual environments** - Never install packages to system Python
+3. **Store secrets in Keychain** - Never commit API keys or credentials
+4. **Reference design documents** - The `docs/` directory contains comprehensive design specifications
+5. **Test with sample data** - Use `sample-data/` for testing before live API calls
+6. **Graceful degradation** - Feed failures should not crash the entire system
+7. **Atomic state writes** - Prevent state corruption with proper file handling
+8. **Agent attribution** - Include agent name in all AI-generated commits
 
 ## Questions and Support
 
-- **Agent Registry**: `/Users/mriechers/Developer/workspace_ops/conventions/AGENT_REGISTRY.md`
-- **Commit Conventions**: `/Users/mriechers/Developer/workspace_ops/conventions/COMMIT_CONVENTIONS.md`
-- **Infrastructure Requirements**: `/Users/mriechers/Developer/workspace_ops/conventions/WORKSPACE_INFRASTRUCTURE_REQUIREMENTS.md`
-- **Bootstrap Guide**: `docs/bootstrap.md`
-
-For agent-related questions, consult workspace conventions or invoke Agent Registrar.
+- **Workspace Conventions**: `/Users/mriechers/Developer/the-lodge/conventions/`
+- **Agent Registry**: `/Users/mriechers/Developer/the-lodge/conventions/AGENT_REGISTRY.md`
+- **Secrets Management**: `/Users/mriechers/Developer/the-lodge/conventions/SECRETS_MANAGEMENT.md`
+- **Project Design**: `docs/COMPREHENSIVE_DESIGN.md`
