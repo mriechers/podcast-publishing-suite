@@ -119,26 +119,41 @@ The system ingests from multiple RSS feeds, each with its own configuration:
 
 ```python
 # config/feeds.py
+
+# PUBLIC_CONTENT_TYPE_TAGS: Only these tags remain public (used for routing)
+# All other tags from RSS feeds will be converted to internal tags
+PUBLIC_CONTENT_TYPE_TAGS = ["wonder-cabinet", "luminous", "newsletter"]
+
 FEEDS = {
     "luminous": {
         "name": "Luminous",
         "feed_url": "https://f.prxu.org/3329/feed-rss.xml",
-        "ghost_primary_tag": "luminous",        # Routes to /luminous/
-        "ghost_internal_tag": "#show-luminous", # Hidden organizational tag
+        "ghost_primary_tag": "luminous",        # Routes to /luminous/ - PUBLIC
         "slug_prefix": "luminous-",             # Prevents slug collisions
-        "default_tags": ["Podcast", "Luminous"],
         "prx_series_id": "3329",
     },
     "wonder-cabinet": {
         "name": "Wonder Cabinet",
         "feed_url": "https://f.prxu.org/120/ttbook",
-        "ghost_primary_tag": "wonder-cabinet",
-        "ghost_internal_tag": "#show-wonder-cabinet",
+        "ghost_primary_tag": "wonder-cabinet",  # Routes to /wonder-cabinet/ - PUBLIC
         "slug_prefix": "wonder-cabinet-",
-        "default_tags": ["Podcast", "Wonder Cabinet"],
         "prx_series_id": "120",
     }
 }
+
+def normalize_tag(tag_name: str) -> dict:
+    """
+    Convert RSS tag to Ghost tag format.
+    Show tags stay public; all others become internal.
+    """
+    slug = slugify(tag_name)
+
+    if slug in PUBLIC_CONTENT_TYPE_TAGS:
+        # Public show tag - use as-is
+        return {"name": tag_name, "slug": slug}
+    else:
+        # Content tag - make internal with # prefix
+        return {"name": f"#{tag_name}", "slug": f"hash-{slug}"}
 ```
 
 ### 2.2 Multi-Feed Processing Flow
@@ -236,14 +251,25 @@ def process_all_feeds():
 
 ### 3.1 Ghost Tags Strategy
 
-Ghost uses **tags** for content organization and routing. For multi-show support:
+Ghost uses **tags** for content organization and routing. For Wonder Cabinet Productions, we use a **simplified tagging strategy**:
+
+**Design Decision (2026-01-05):** Public tags are reserved exclusively for podcast shows. All content/topic tags from RSS feeds are converted to internal tags.
 
 | Tag Type | Purpose | Example | Visibility |
 |----------|---------|---------|------------|
-| **Primary Tag** | Routes post to correct collection | `luminous` | Public |
-| **Internal Tag** | Additional filtering, won't display | `#show-luminous` | Hidden |
-| **Content Tags** | Episode categorization | `Season 2`, `Interview` | Public |
-| **Format Tags** | Content type | `Podcast`, `Episode` | Public |
+| **Primary Tag** | Routes post to correct show collection | `wonder-cabinet`, `luminous` | Public |
+| **Content Tags** | Episode topics from RSS feed | `#psychedelics`, `#interview` | Internal |
+
+**Rationale:**
+- Keeps the public tag list clean and focused (only shows)
+- Content tags still available for internal filtering/organization
+- Prevents tag clutter as episode archive grows
+- Future-proof for seasons or other show groupings
+
+**Implementation Rules:**
+1. **Show tags** (`wonder-cabinet`, `luminous`) → Keep as public, use as primary tag
+2. **All other tags** from RSS feed → Prefix with `#` to make internal
+3. Importer must check: if tag is not a known show slug, make it internal
 
 ### 3.2 Ghost routes.yaml Configuration
 
@@ -300,21 +326,19 @@ When a post is created with `primary_tag: luminous`:
 def transform_episode_to_ghost_post(episode: RSSItem, feed_config: dict) -> dict:
     """Transform RSS episode to Ghost post with proper tagging."""
 
-    # Build tags array - PRIMARY TAG MUST BE FIRST
+    # Build tags array - PRIMARY TAG MUST BE FIRST (for routing)
     tags = [
-        {"name": feed_config["ghost_primary_tag"]},  # FIRST = routing
-        {"name": feed_config["ghost_internal_tag"]}, # Internal marker
+        {"name": feed_config["ghost_primary_tag"]},  # FIRST = routing (public)
     ]
 
-    # Add default tags from config
-    for tag_name in feed_config.get("default_tags", []):
-        tags.append({"name": tag_name})
+    # Add episode-specific tags from RSS - normalized to internal
+    # Example: "Psychedelics" from RSS becomes "#Psychedelics" (internal)
+    for tag_name in episode.get("tags", []):
+        tags.append(normalize_tag(tag_name))  # Uses normalize_tag() from config
 
-    # Add episode-specific tags
+    # Add season tag if present (also internal)
     if season := episode.get("itunes_season"):
-        tags.append({"name": f"Season {season}"})
-    if ep_type := episode.get("itunes_episodeType"):
-        tags.append({"name": ep_type.capitalize()})
+        tags.append({"name": f"#Season {season}", "slug": f"hash-season-{season}"})
 
     return {
         "title": episode.title,
@@ -329,6 +353,10 @@ def transform_episode_to_ghost_post(episode: RSSItem, feed_config: dict) -> dict
         "meta_description": truncate(episode.description, 160),
     }
 ```
+
+**Note:** The `normalize_tag()` function (defined in Section 2.1) ensures:
+- Show tags (`wonder-cabinet`, `luminous`) stay public
+- All other tags become internal (prefixed with `#`)
 
 ### 3.5 Slug Collision Prevention
 
@@ -1383,15 +1411,24 @@ theme/
 
 ### 13.4 Ghost Tag Configuration
 
+**Tag Strategy (Updated 2026-01-05):** Only podcast show tags are public. All content/topic tags are internal.
+
 Create these tags in Ghost Admin before automation goes live:
 
-| Tag | Slug | Description | Feature Image |
-|-----|------|-------------|---------------|
-| **Luminous** | `luminous` | Show description for Luminous | Show artwork |
-| **Wonder Cabinet** | `wonder-cabinet` | Show description for Wonder Cabinet | Show artwork |
-| **#show-luminous** | `hash-show-luminous` | Internal routing tag | — |
-| **#show-wonder-cabinet** | `hash-show-wonder-cabinet` | Internal routing tag | — |
-| **Podcast** | `podcast` | General podcast content marker | — |
+| Tag | Slug | Visibility | Description | Feature Image |
+|-----|------|------------|-------------|---------------|
+| **Luminous** | `luminous` | Public | Show description for Luminous | Show artwork |
+| **Wonder Cabinet** | `wonder-cabinet` | Public | Show description for Wonder Cabinet | Show artwork |
+
+**Content tags are created automatically by the importer as internal tags.** For example:
+- RSS tag "Psychedelics" → Ghost tag `#Psychedelics` (internal)
+- RSS tag "Interview" → Ghost tag `#Interview` (internal)
+
+**Why this approach:**
+- Keeps public tag list clean (only shows visible to visitors)
+- Content tags available for internal filtering in Ghost Admin
+- Prevents tag clutter as episode archive grows
+- Future seasons can be added as public tags when needed
 
 ### 13.5 Theme Deployment Process
 
@@ -1656,12 +1693,11 @@ These items must be completed before development can proceed:
 | P0.5 | **Note the Admin API key** | User | ⏳ Pending | Format: `{id}:{secret}` - don't commit to repo |
 | P0.6 | **Create required Ghost tags** | User | ⏳ Pending | See Section 13.4 for tag list |
 
-**Checklist for Ghost Tags to Create:**
-- [ ] `luminous` - Primary tag for Luminous episodes
-- [ ] `wonder-cabinet` - Primary tag for Wonder Cabinet episodes
-- [ ] `#show-luminous` - Internal tag (type with # prefix)
-- [ ] `#show-wonder-cabinet` - Internal tag (type with # prefix)
-- [ ] `Podcast` - General content type tag
+**Checklist for Ghost Tags to Create (Updated 2026-01-05):**
+- [ ] `luminous` - Primary tag for Luminous episodes (PUBLIC)
+- [ ] `wonder-cabinet` - Primary tag for Wonder Cabinet episodes (PUBLIC)
+
+**Note:** Content/topic tags are NOT pre-created. The importer automatically creates them as internal tags (prefixed with `#`) when it encounters them in RSS feeds. This keeps the public tag list clean.
 
 ### 16.2 Phase 1: Theme Setup (Collaborative)
 
@@ -1829,26 +1865,29 @@ DRY_RUN=false
 ### Feed Configuration (config/feeds.py)
 
 ```python
+# PUBLIC_SHOW_TAGS: Only these tags remain public (used for routing)
+# All other tags from RSS feeds are converted to internal tags (prefixed with #)
+PUBLIC_SHOW_TAGS = ["wonder-cabinet", "luminous"]
+
 FEEDS = {
     "luminous": {
         "name": "Luminous",
         "feed_url": "https://f.prxu.org/3329/feed-rss.xml",
-        "ghost_primary_tag": "luminous",
-        "ghost_internal_tag": "#show-luminous",
+        "ghost_primary_tag": "luminous",  # PUBLIC - used for routing
         "slug_prefix": "luminous-",
-        "default_tags": ["Podcast", "Luminous"],
         "prx_series_id": "3329",
     },
     "wonder-cabinet": {
         "name": "Wonder Cabinet",
         "feed_url": "https://f.prxu.org/120/ttbook",
-        "ghost_primary_tag": "wonder-cabinet",
-        "ghost_internal_tag": "#show-wonder-cabinet",
+        "ghost_primary_tag": "wonder-cabinet",  # PUBLIC - used for routing
         "slug_prefix": "wonder-cabinet-",
-        "default_tags": ["Podcast", "Wonder Cabinet"],
         "prx_series_id": "120",
     }
 }
+
+# Tag normalization: show tags stay public, all others become internal
+# See Section 2.1 for normalize_tag() implementation
 ```
 
 ### Ghost routes.yaml (Deploy to Ghost Admin > Labs > Routes)
