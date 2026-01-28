@@ -127,6 +127,7 @@ def build_html5_audio_player(enclosure_url: str, enclosure_type: str = "audio/mp
 def build_audio_player_card(
     episode: "Episode",
     guest: Optional[str] = None,
+    peaks_url: Optional[str] = None,
 ) -> str:
     """Build a Custom HTML Card with data attributes for theme-hydrated audio player.
 
@@ -137,6 +138,8 @@ def build_audio_player_card(
     Args:
         episode: Parsed Episode object with audio data.
         guest: Optional guest name (parsed from title if not provided).
+        peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer
+                   (solves CORS issues with PRX redirect URLs).
 
     Returns:
         HTML string with Ghost card markers and data attributes.
@@ -153,6 +156,11 @@ def build_audio_player_card(
     guid = html.escape(episode.guid or "", quote=True)
     guest_attr = html.escape(guest or "", quote=True)
 
+    # Add peaks URL if provided
+    peaks_attr = ""
+    if peaks_url:
+        peaks_attr = f'\n     data-peaks-url="{html.escape(peaks_url, quote=True)}"'
+
     return f'''<!--kg-card-begin: html-->
 <div class="wc-audio-player"
      data-audio-url="{audio_url}"
@@ -161,7 +169,7 @@ def build_audio_player_card(
      data-episode-guest="{guest_attr}"
      data-episode-description="{description}"
      data-episode-duration="{duration}"
-     data-episode-guid="{guid}">
+     data-episode-guid="{guid}"{peaks_attr}>
 </div>
 <!--kg-card-end: html-->'''
 
@@ -299,6 +307,7 @@ def build_luminous_post_html(
     episode: Episode,
     feed_url: str = 'https://f.prxu.org/3329/feed-rss.xml',
     transcript: Optional[str] = None,
+    peaks_url: Optional[str] = None,
 ) -> str:
     """Build HTML content for a Luminous episode post.
 
@@ -317,6 +326,7 @@ def build_luminous_post_html(
         episode: Parsed Episode object.
         feed_url: URL to the Luminous RSS feed for pod.link generation.
         transcript: Optional transcript text.
+        peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer.
 
     Returns:
         Complete HTML for Ghost post body.
@@ -325,11 +335,12 @@ def build_luminous_post_html(
 
     # 1. Theme-hydrated audio player with data attributes
     if episode.enclosure_url:
-        sections.append(build_audio_player_card(episode))
+        sections.append(build_audio_player_card(episode, peaks_url=peaks_url))
 
-    # 2. Pod.link - universal "Listen on your favorite app" link
-    if episode.guid and feed_url:
-        sections.append(build_listen_links_html(episode.guid, feed_url))
+    # Listen links removed per editorial decision — pod.link buttons
+    # were not wanted in the imported Luminous content.
+    # if episode.guid and feed_url:
+    #     sections.append(build_listen_links_html(episode.guid, feed_url))
 
     # 3. Episode description (from content:encoded, with boilerplate stripped)
     if episode.description:
@@ -357,6 +368,7 @@ def build_luminous_ghost_post(
     status: str = 'draft',
     transcript: Optional[str] = None,
     feed_url: str = 'https://f.prxu.org/3329/feed-rss.xml',
+    peaks_url: Optional[str] = None,
 ) -> GhostPost:
     """Build a GhostPost for a Luminous episode.
 
@@ -372,6 +384,7 @@ def build_luminous_ghost_post(
         status: Post status ('draft' or 'published').
         transcript: Optional transcript text.
         feed_url: Luminous feed URL for player embed.
+        peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer.
 
     Returns:
         GhostPost ready for Ghost API.
@@ -382,7 +395,7 @@ def build_luminous_ghost_post(
     title = transform_title(episode.title, 'luminous')
 
     # Build HTML content with transcript if available
-    html_content = build_luminous_post_html(episode, feed_url, transcript)
+    html_content = build_luminous_post_html(episode, feed_url, transcript, peaks_url)
 
     # Build tags
     tags = [
