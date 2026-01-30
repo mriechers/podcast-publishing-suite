@@ -1,6 +1,5 @@
 """Tests for Dovetail API client."""
 
-import json
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
@@ -143,11 +142,11 @@ class TestParseApiEpisode:
 class TestGetPodcasts:
     """Tests for get_podcasts method."""
 
-    @patch("src.dovetail_client.requests.request")
-    def test_get_podcasts_hal_format(self, mock_request, dovetail_client):
+    def test_get_podcasts_hal_format(self, dovetail_client):
         """Test parsing HAL+JSON format response."""
         mock_response = MagicMock()
         mock_response.ok = True
+        mock_response.status_code = 200
         mock_response.json.return_value = {
             "_embedded": {
                 "prx:items": [
@@ -159,7 +158,7 @@ class TestGetPodcasts:
                 "next": {"href": "/api/v1/authorization/podcasts?page=2"}
             }
         }
-        mock_request.return_value = mock_response
+        dovetail_client._session.request = MagicMock(return_value=mock_response)
 
         podcasts = dovetail_client.get_podcasts(page=1, per=50)
 
@@ -167,18 +166,18 @@ class TestGetPodcasts:
         assert podcasts[0]["id"] == "120"
         assert podcasts[1]["title"] == "Another Show"
 
-    @patch("src.dovetail_client.requests.request")
-    def test_get_podcasts_pagination_params(self, mock_request, dovetail_client):
+    def test_get_podcasts_pagination_params(self, dovetail_client):
         """Test that pagination parameters are passed correctly."""
         mock_response = MagicMock()
         mock_response.ok = True
+        mock_response.status_code = 200
         mock_response.json.return_value = {"_embedded": {"prx:items": []}}
-        mock_request.return_value = mock_response
+        dovetail_client._session.request = MagicMock(return_value=mock_response)
 
         dovetail_client.get_podcasts(page=3, per=25)
 
-        mock_request.assert_called_once()
-        call_kwargs = mock_request.call_args[1]
+        dovetail_client._session.request.assert_called_once()
+        call_kwargs = dovetail_client._session.request.call_args[1]
         assert call_kwargs["params"]["page"] == 3
         assert call_kwargs["params"]["per"] == 25
 
@@ -186,11 +185,11 @@ class TestGetPodcasts:
 class TestGetEpisodes:
     """Tests for get_episodes method."""
 
-    @patch("src.dovetail_client.requests.request")
-    def test_get_episodes_with_since(self, mock_request, dovetail_client):
+    def test_get_episodes_with_since(self, dovetail_client):
         """Test episodes fetch with since parameter."""
         mock_response = MagicMock()
         mock_response.ok = True
+        mock_response.status_code = 200
         mock_response.json.return_value = {
             "_embedded": {
                 "prx:items": [
@@ -202,7 +201,7 @@ class TestGetEpisodes:
                 ]
             }
         }
-        mock_request.return_value = mock_response
+        dovetail_client._session.request = MagicMock(return_value=mock_response)
 
         since = datetime(2025, 9, 1, 0, 0, 0)
         episodes = dovetail_client.get_episodes(podcast_id="120", since=since)
@@ -211,14 +210,14 @@ class TestGetEpisodes:
         assert episodes[0].guid == "prx_120_ep1"
 
         # Verify since was passed
-        call_kwargs = mock_request.call_args[1]
+        call_kwargs = dovetail_client._session.request.call_args[1]
         assert "since" in call_kwargs["params"]
 
-    @patch("src.dovetail_client.requests.request")
-    def test_get_episodes_filters_by_podcast_id(self, mock_request, dovetail_client):
+    def test_get_episodes_filters_by_podcast_id(self, dovetail_client):
         """Test that episodes are filtered by podcast_id."""
         mock_response = MagicMock()
         mock_response.ok = True
+        mock_response.status_code = 200
         mock_response.json.return_value = {
             "_embedded": {
                 "prx:items": [
@@ -227,7 +226,7 @@ class TestGetEpisodes:
                 ]
             }
         }
-        mock_request.return_value = mock_response
+        dovetail_client._session.request = MagicMock(return_value=mock_response)
 
         episodes = dovetail_client.get_episodes(podcast_id="120")
 
@@ -249,16 +248,16 @@ class TestGetEpisodes:
 class TestGetEpisodeByGuid:
     """Tests for get_episode_by_guid method."""
 
-    @patch("src.dovetail_client.requests.request")
-    def test_get_episode_by_guid_found(self, mock_request, dovetail_client):
+    def test_get_episode_by_guid_found(self, dovetail_client):
         """Test successful GUID lookup."""
         mock_response = MagicMock()
         mock_response.ok = True
+        mock_response.status_code = 200
         mock_response.json.return_value = {
             "guid": "prx_120_specific-episode",
             "title": "Specific Episode",
         }
-        mock_request.return_value = mock_response
+        dovetail_client._session.request = MagicMock(return_value=mock_response)
 
         episode = dovetail_client.get_episode_by_guid(
             guid="prx_120_specific-episode",
@@ -268,14 +267,14 @@ class TestGetEpisodeByGuid:
         assert episode is not None
         assert episode.guid == "prx_120_specific-episode"
 
-    @patch("src.dovetail_client.requests.request")
-    def test_get_episode_by_guid_not_found(self, mock_request, dovetail_client):
+    def test_get_episode_by_guid_not_found(self, dovetail_client):
         """Test GUID lookup returns None for 404."""
         mock_response = MagicMock()
         mock_response.ok = False
         mock_response.status_code = 404
         mock_response.text = "Not found"
-        mock_request.return_value = mock_response
+        mock_response.headers = {}
+        dovetail_client._session.request = MagicMock(return_value=mock_response)
 
         episode = dovetail_client.get_episode_by_guid(
             guid="nonexistent",
@@ -288,49 +287,54 @@ class TestGetEpisodeByGuid:
 class TestErrorHandling:
     """Tests for API error handling."""
 
-    @patch("src.dovetail_client.requests.request")
-    def test_401_triggers_token_refresh(self, mock_request, dovetail_client):
+    def test_401_triggers_token_refresh(self, dovetail_client):
         """Test that 401 response triggers token refresh and retry."""
         # First call returns 401, second succeeds
         mock_401 = MagicMock()
         mock_401.ok = False
         mock_401.status_code = 401
         mock_401.text = "Unauthorized"
+        mock_401.headers = {}
 
         mock_success = MagicMock()
         mock_success.ok = True
+        mock_success.status_code = 200
         mock_success.json.return_value = {"_embedded": {"prx:items": []}}
 
-        mock_request.side_effect = [mock_401, mock_success]
+        dovetail_client._session.request = MagicMock(
+            side_effect=[mock_401, mock_success]
+        )
 
         dovetail_client.get_podcasts()
 
         # Should have invalidated token and retried
         dovetail_client.auth_client.invalidate_token.assert_called_once()
-        assert mock_request.call_count == 2
+        assert dovetail_client._session.request.call_count == 2
 
-    @patch("src.dovetail_client.requests.request")
-    def test_api_error_includes_details(self, mock_request, dovetail_client):
+    def test_api_error_includes_details(self, dovetail_client):
         """Test that API errors include status and response body."""
         mock_response = MagicMock()
         mock_response.ok = False
         mock_response.status_code = 500
         mock_response.text = '{"error": "Internal server error"}'
-        mock_request.return_value = mock_response
+        mock_response.headers = {}
+        dovetail_client._session.request = MagicMock(return_value=mock_response)
 
-        with pytest.raises(DovetailAPIError) as exc_info:
-            dovetail_client.get_podcasts()
+        with patch("src.dovetail_client.time.sleep"):
+            with pytest.raises(DovetailAPIError) as exc_info:
+                dovetail_client.get_podcasts()
 
         error = exc_info.value
         assert error.status_code == 500
         assert "Internal server error" in error.response_body
 
-    @patch("src.dovetail_client.requests.request")
-    def test_connection_error_handled(self, mock_request, dovetail_client):
+    def test_connection_error_handled(self, dovetail_client):
         """Test graceful handling of connection errors."""
         from requests.exceptions import ConnectionError
 
-        mock_request.side_effect = ConnectionError("Connection refused")
+        dovetail_client._session.request = MagicMock(
+            side_effect=ConnectionError("Connection refused")
+        )
 
         with pytest.raises(DovetailAPIError) as exc_info:
             dovetail_client.get_podcasts()

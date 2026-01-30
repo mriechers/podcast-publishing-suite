@@ -31,7 +31,7 @@ class Config:
     dry_run: bool = False
     state_file: Path = Path("data/published_episodes.json")
     default_author: str = "Wisconsin Public Radio"
-    primary_tag: str = "TTBOOK"
+    primary_tag: str = "Wonder Cabinet"
 
     # PRX Dovetail API settings
     prx_client_id: str = ""
@@ -90,6 +90,9 @@ class Config:
 # Module-level singleton
 _config: Optional[Config] = None
 
+# Valid environment names
+VALID_ENVIRONMENTS = ("dev", "prod")
+
 
 def _parse_podcast_ids(env_value: str, json_value: list[str]) -> list[str]:
     """Parse podcast IDs from environment variable or JSON config.
@@ -107,11 +110,13 @@ def _parse_podcast_ids(env_value: str, json_value: list[str]) -> list[str]:
     return json_value or []
 
 
-def get_config(reload: bool = False) -> Config:
+def get_config(reload: bool = False, env_name: str = "dev") -> Config:
     """Get the application configuration singleton.
 
     Args:
         reload: If True, reload configuration from disk even if already loaded.
+        env_name: Environment name ('dev' or 'prod'). Determines which .env
+                  file and state file to use.
 
     Returns:
         Config instance with validated settings.
@@ -124,12 +129,26 @@ def get_config(reload: bool = False) -> Config:
     if _config is not None and not reload:
         return _config
 
+    # Validate environment name
+    if env_name not in VALID_ENVIRONMENTS:
+        raise ConfigError(
+            f"Invalid environment '{env_name}'. Must be one of: {', '.join(VALID_ENVIRONMENTS)}"
+        )
+
     # Determine project root (where .env and config.json live)
     project_root = Path(__file__).parent.parent
 
-    # Load .env file
-    env_path = project_root / ".env"
-    load_dotenv(env_path)
+    # Load environment-specific .env file, falling back to .env
+    env_path = project_root / f".env.{env_name}"
+    if not env_path.exists():
+        env_path = project_root / ".env"
+    if env_path.exists():
+        load_dotenv(env_path, override=True)
+    else:
+        raise ConfigError(
+            f"No .env file found for environment '{env_name}'. "
+            f"Expected: .env.{env_name} or .env"
+        )
 
     # Load config.json for defaults
     config_json_path = project_root / "config.json"
@@ -143,8 +162,8 @@ def get_config(reload: bool = False) -> Config:
     defaults = json_config.get("defaults", {})
 
     # Build configuration, environment variables take precedence
-    state_file_str = json_config.get("state_file", "data/published_episodes.json")
-    state_file = Path(state_file_str)
+    # Use environment-specific state file: published_episodes.{env}.json
+    state_file = Path(f"data/published_episodes.{env_name}.json")
 
     # Make state_file path absolute relative to project root
     if not state_file.is_absolute():
@@ -162,7 +181,7 @@ def get_config(reload: bool = False) -> Config:
         dry_run=os.getenv("DRY_RUN", "false").lower() in ("true", "1", "yes"),
         state_file=state_file,
         default_author=defaults.get("author", "Wisconsin Public Radio"),
-        primary_tag=defaults.get("primary_tag", "TTBOOK"),
+        primary_tag=defaults.get("primary_tag", "Wonder Cabinet"),
         # PRX Dovetail API settings
         prx_client_id=os.getenv("PRX_CLIENT_ID", prx_config.get("client_id", "")),
         prx_client_secret=os.getenv("PRX_CLIENT_SECRET", prx_config.get("client_secret", "")),
@@ -181,6 +200,13 @@ def get_config(reload: bool = False) -> Config:
         ),
         use_dovetail_api=os.getenv("PRX_USE_API", "false").lower() in ("true", "1", "yes"),
     )
+
+    # Enforce HTTPS in production (JWT tokens sent in cleartext over HTTP)
+    if env_name == "prod" and _config.ghost_url.startswith("http://"):
+        raise ConfigError(
+            "GHOST_URL must use HTTPS in production. "
+            f"Got: {_config.ghost_url}"
+        )
 
     return _config
 

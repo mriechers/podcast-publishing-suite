@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from email.utils import parsedate_to_datetime
 from typing import Optional
+from urllib.parse import urlparse
 
 import requests
 
@@ -56,6 +57,27 @@ class Episode:
         return f"Episode({self.guid}: {self.title})"
 
 
+def _validate_feed_url(url: str) -> None:
+    """Validate that a feed URL is safe to fetch.
+
+    Rejects file:// scheme, URLs without hostname, and non-HTTP(S) schemes
+    to prevent SSRF and local file disclosure.
+
+    Args:
+        url: URL to validate.
+
+    Raises:
+        FeedFetchError: If URL is not safe.
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise FeedFetchError(
+            f"Unsupported URL scheme '{parsed.scheme}'. Only http/https allowed."
+        )
+    if not parsed.hostname:
+        raise FeedFetchError(f"Feed URL missing hostname: {url}")
+
+
 def fetch_feed(url: str, timeout: int = 30) -> str:
     """Fetch RSS feed content from URL.
 
@@ -67,8 +89,10 @@ def fetch_feed(url: str, timeout: int = 30) -> str:
         Raw XML content as string.
 
     Raises:
-        FeedFetchError: If request fails.
+        FeedFetchError: If request fails or URL is invalid.
     """
+    _validate_feed_url(url)
+
     headers = {
         "User-Agent": "PRX-to-Ghost-Publisher/0.1.0 (+https://github.com/prx-publisher)",
         "Accept": "application/rss+xml, application/xml, text/xml",

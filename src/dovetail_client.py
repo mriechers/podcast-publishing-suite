@@ -7,6 +7,7 @@ Podcasts API to fetch podcast and episode data.
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime
 from typing import Any, Optional
 
@@ -16,6 +17,11 @@ from .feed_parser import Episode
 from .prx_auth import PRXAuthClient, PRXAuthError
 
 logger = logging.getLogger(__name__)
+
+# Retry configuration
+MAX_RETRIES = 3
+RETRY_BASE_DELAY = 1.0
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503}
 
 
 class DovetailAPIError(Exception):
@@ -89,6 +95,7 @@ class DovetailClient:
         self.podcast_id = podcast_id
         self.api_base_url = (api_base_url or self.PRODUCTION_API_BASE).rstrip("/")
         self.request_timeout = request_timeout
+        self._session = requests.Session()
 
         logger.debug(f"DovetailClient initialized with base: {self.api_base_url}")
 
@@ -125,55 +132,88 @@ class DovetailClient:
                 endpoint=endpoint,
             )
 
-        try:
-            response = requests.request(
-                method=method,
-                url=url,
-                headers=headers,
-                params=params,
-                json=json_data,
-                timeout=self.request_timeout,
-            )
-        except requests.exceptions.Timeout:
-            raise DovetailAPIError(
-                f"Request timed out after {self.request_timeout}s",
-                endpoint=endpoint,
-            )
-        except requests.exceptions.ConnectionError as e:
-            raise DovetailAPIError(
-                f"Connection error: {e}",
-                endpoint=endpoint,
-            )
-        except requests.exceptions.RequestException as e:
-            raise DovetailAPIError(
-                f"Request failed: {e}",
-                endpoint=endpoint,
-            )
+        last_exception: Optional[Exception] = None
 
-        # Handle 401 with token refresh retry
-        if response.status_code == 401 and retry_on_401:
-            logger.warning("Received 401, retrying with fresh token")
-            self.auth_client.invalidate_token()
-            return self._make_request(
-                method, endpoint, params, json_data, retry_on_401=False
-            )
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                response = self._session.request(
+                    method=method,
+                    url=url,
+                    headers=headers,
+                    params=params,
+                    json=json_data,
+                    timeout=self.request_timeout,
+                )
+            except requests.exceptions.Timeout:
+                last_exception = DovetailAPIError(
+                    f"Request timed out after {self.request_timeout}s",
+                    endpoint=endpoint,
+                )
+                if attempt < MAX_RETRIES:
+                    delay = RETRY_BASE_DELAY * (2 ** attempt)
+                    logger.warning(f"Timeout on {endpoint}, retrying in {delay:.1f}s")
+                    time.sleep(delay)
+                    continue
+                raise last_exception
+            except requests.exceptions.ConnectionError as e:
+                last_exception = DovetailAPIError(
+                    f"Connection error: {e}", endpoint=endpoint,
+                )
+                if attempt < MAX_RETRIES:
+                    delay = RETRY_BASE_DELAY * (2 ** attempt)
+                    logger.warning(f"Connection error on {endpoint}, retrying in {delay:.1f}s")
+                    time.sleep(delay)
+                    continue
+                raise last_exception
+            except requests.exceptions.RequestException as e:
+                raise DovetailAPIError(
+                    f"Request failed: {e}", endpoint=endpoint,
+                )
 
-        if not response.ok:
-            raise DovetailAPIError(
-                f"API request failed",
-                status_code=response.status_code,
-                response_body=response.text,
-                endpoint=endpoint,
-            )
+            # Handle 401 with token refresh retry
+            if response.status_code == 401 and retry_on_401:
+                logger.warning("Received 401, retrying with fresh token")
+                self.auth_client.invalidate_token()
+                return self._make_request(
+                    method, endpoint, params, json_data, retry_on_401=False
+                )
 
-        try:
-            return response.json()
-        except ValueError:
-            raise DovetailAPIError(
-                "Invalid JSON response",
-                response_body=response.text,
-                endpoint=endpoint,
-            )
+            # Retry on 5xx / 429
+            if response.status_code in RETRYABLE_STATUS_CODES:
+                if attempt < MAX_RETRIES:
+                    if response.status_code == 429:
+                        delay = float(response.headers.get("Retry-After", RETRY_BASE_DELAY))
+                    else:
+                        delay = RETRY_BASE_DELAY * (2 ** attempt)
+                    logger.warning(
+                        f"HTTP {response.status_code} from {endpoint}, "
+                        f"retrying in {delay:.1f}s (attempt {attempt + 1}/{MAX_RETRIES})"
+                    )
+                    time.sleep(delay)
+                    continue
+
+            if not response.ok:
+                raise DovetailAPIError(
+                    f"API request failed",
+                    status_code=response.status_code,
+                    response_body=response.text,
+                    endpoint=endpoint,
+                )
+
+            try:
+                return response.json()
+            except ValueError:
+                raise DovetailAPIError(
+                    "Invalid JSON response",
+                    response_body=response.text,
+                    endpoint=endpoint,
+                )
+
+        # Exhausted retries
+        raise DovetailAPIError(
+            f"Request failed after {MAX_RETRIES} retries",
+            endpoint=endpoint,
+        )
 
     def get_authorization(self) -> dict[str, Any]:
         """Get authorization root with available operations.
@@ -244,6 +284,58 @@ class DovetailClient:
 
         return all_podcasts
 
+    @staticmethod
+    def _extract_items(response: dict[str, Any]) -> list[dict[str, Any]]:
+        """Extract item list from a HAL+JSON response.
+
+        Handles the three common response shapes from the Dovetail API:
+        1. HAL+JSON with _embedded.prx:items
+        2. Direct list
+        3. Dict with 'items' key
+
+        Args:
+            response: Parsed JSON response from the API.
+
+        Returns:
+            List of item dicts.
+        """
+        if "_embedded" in response and "prx:items" in response["_embedded"]:
+            return response["_embedded"]["prx:items"]
+        if isinstance(response, list):
+            return response
+        return response.get("items", [])
+
+    @staticmethod
+    def _extract_podcast_id(item: dict[str, Any]) -> str:
+        """Extract podcast ID from an episode item.
+
+        Tries multiple fields in order:
+        1. _links.prx:podcast.href (e.g., "/api/v1/podcasts/3329")
+        2. GUID prefix (e.g., "prx_3329_uuid...")
+        3. Direct podcastId / podcast_id field
+
+        Args:
+            item: Episode dict from API response.
+
+        Returns:
+            Podcast ID string, or empty string if not found.
+        """
+        # Try _links first
+        if "_links" in item and "prx:podcast" in item["_links"]:
+            podcast_href = item["_links"]["prx:podcast"].get("href", "")
+            if podcast_href:
+                return podcast_href.rstrip("/").split("/")[-1]
+
+        # Fall back to GUID prefix
+        guid = item.get("guid", "")
+        if guid.startswith("prx_"):
+            parts = guid.split("_")
+            if len(parts) >= 2:
+                return parts[1]
+
+        # Fall back to direct field
+        return str(item.get("podcastId", item.get("podcast_id", "")))
+
     def get_episodes(
         self,
         podcast_id: Optional[str] = None,
@@ -280,46 +372,12 @@ class DovetailClient:
             params["since"] = since.isoformat()
 
         response = self._make_request("GET", "/authorization/episodes", params=params)
+        items = self._extract_items(response)
 
-        # Handle HAL+JSON format
-        if "_embedded" in response and "prx:items" in response["_embedded"]:
-            items = response["_embedded"]["prx:items"]
-        elif isinstance(response, list):
-            items = response
-        else:
-            items = response.get("items", [])
-
-        # Filter by podcast_id if API returns all episodes
-        # and parse into Episode objects
+        # Filter by podcast_id and parse into Episode objects
         episodes = []
         for item in items:
-            # Check if this episode belongs to our podcast
-            # The podcast ID can be found in:
-            # 1. _links.prx:podcast.href (e.g., "/api/v1/podcasts/3329")
-            # 2. The GUID prefix (e.g., "prx_3329_...")
-            # 3. Direct podcastId field (if present)
-            item_podcast_id = ""
-
-            # Try _links first
-            if "_links" in item and "prx:podcast" in item["_links"]:
-                podcast_href = item["_links"]["prx:podcast"].get("href", "")
-                # Extract ID from "/api/v1/podcasts/3329"
-                if podcast_href:
-                    item_podcast_id = podcast_href.rstrip("/").split("/")[-1]
-
-            # Fall back to GUID prefix
-            if not item_podcast_id:
-                guid = item.get("guid", "")
-                if guid.startswith("prx_"):
-                    # Extract from "prx_3329_uuid..."
-                    parts = guid.split("_")
-                    if len(parts) >= 2:
-                        item_podcast_id = parts[1]
-
-            # Fall back to direct field
-            if not item_podcast_id:
-                item_podcast_id = str(item.get("podcastId", item.get("podcast_id", "")))
-
+            item_podcast_id = self._extract_podcast_id(item)
             if item_podcast_id and item_podcast_id != pid:
                 continue
 
@@ -364,34 +422,14 @@ class DovetailClient:
                 params["since"] = since.isoformat()
 
             response = self._make_request("GET", "/authorization/episodes", params=params)
-
-            # Extract items from response
-            if "_embedded" in response and "prx:items" in response["_embedded"]:
-                items = response["_embedded"]["prx:items"]
-            elif isinstance(response, list):
-                items = response
-            else:
-                items = response.get("items", [])
+            items = self._extract_items(response)
 
             if not items:
                 break
 
             # Filter and parse episodes for our podcast
             for item in items:
-                # Extract podcast ID from _links or GUID
-                item_podcast_id = ""
-                if "_links" in item and "prx:podcast" in item["_links"]:
-                    podcast_href = item["_links"]["prx:podcast"].get("href", "")
-                    if podcast_href:
-                        item_podcast_id = podcast_href.rstrip("/").split("/")[-1]
-                if not item_podcast_id:
-                    guid = item.get("guid", "")
-                    if guid.startswith("prx_"):
-                        parts = guid.split("_")
-                        if len(parts) >= 2:
-                            item_podcast_id = parts[1]
-
-                # Skip if not our podcast
+                item_podcast_id = self._extract_podcast_id(item)
                 if pid and item_podcast_id != pid:
                     continue
 

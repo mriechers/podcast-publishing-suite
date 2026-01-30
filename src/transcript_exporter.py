@@ -13,6 +13,7 @@ Note: Since our source transcripts don't have timestamps, SRT/VTT outputs
 use placeholder timings. JSON and HTML are recommended for PRX upload.
 """
 
+import html as html_mod
 import json
 import logging
 import re
@@ -178,7 +179,7 @@ def export_to_html(transcript: Transcript) -> str:
         '<html lang="en">',
         '<head>',
         '  <meta charset="UTF-8">',
-        f'  <title>Transcript: {transcript.episode_title or transcript.episode_slug}</title>',
+        f'  <title>Transcript: {html_mod.escape(transcript.episode_title or transcript.episode_slug)}</title>',
         '  <style>',
         '    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2em auto; padding: 0 1em; line-height: 1.6; }',
         '    .segment { margin-bottom: 1.5em; }',
@@ -190,14 +191,14 @@ def export_to_html(transcript: Transcript) -> str:
     ]
 
     if transcript.episode_title:
-        lines.append(f'  <h1>{transcript.episode_title}</h1>')
+        lines.append(f'  <h1>{html_mod.escape(transcript.episode_title)}</h1>')
 
     lines.append('  <div class="transcript">')
 
     for segment in transcript.segments:
         lines.append('    <div class="segment">')
-        lines.append(f'      <p class="speaker">{segment.speaker}:</p>')
-        lines.append(f'      <p class="text">{segment.text}</p>')
+        lines.append(f'      <p class="speaker">{html_mod.escape(segment.speaker)}:</p>')
+        lines.append(f'      <p class="text">{html_mod.escape(segment.text)}</p>')
         lines.append('    </div>')
 
     lines.extend([

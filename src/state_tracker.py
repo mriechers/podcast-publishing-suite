@@ -1,15 +1,28 @@
-"""State tracking for published episodes to prevent duplicates."""
+"""State tracking for published episodes to prevent duplicates.
+
+Provides atomic file writes, file locking to prevent concurrent corruption,
+and corruption recovery with backup files.
+"""
 
 from __future__ import annotations
 
+import fcntl
 import json
 import logging
+import os
+import shutil
+import tempfile
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+class StateLockError(Exception):
+    """Raised when the state file lock cannot be acquired."""
+    pass
 
 
 @dataclass
@@ -55,9 +68,54 @@ class StateTracker:
         self._state: dict[str, PublishedEpisode] = {}
         self._metadata: dict[str, str] = {}
         self._loaded = False
+        self._lock_fd: Optional[int] = None
+
+    def acquire_lock(self) -> None:
+        """Acquire an exclusive file lock to prevent concurrent access.
+
+        Uses fcntl.flock() on a .lock file adjacent to the state file.
+        Non-blocking: raises StateLockError immediately if lock is held.
+
+        Raises:
+            StateLockError: If lock is already held by another process.
+        """
+        lock_path = self.state_file.with_suffix(".lock")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            self._lock_fd = os.open(
+                str(lock_path), os.O_CREAT | os.O_RDWR, 0o644
+            )
+            fcntl.flock(self._lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            logger.debug(f"Acquired state lock: {lock_path}")
+        except OSError:
+            if self._lock_fd is not None:
+                os.close(self._lock_fd)
+                self._lock_fd = None
+            raise StateLockError(
+                "Another sync process is already running. "
+                "If this is unexpected, remove the lock file: "
+                f"{lock_path}"
+            )
+
+    def release_lock(self) -> None:
+        """Release the file lock if held."""
+        if self._lock_fd is not None:
+            try:
+                fcntl.flock(self._lock_fd, fcntl.LOCK_UN)
+                os.close(self._lock_fd)
+                logger.debug("Released state lock")
+            except OSError as e:
+                logger.warning(f"Error releasing lock: {e}")
+            finally:
+                self._lock_fd = None
 
     def _ensure_loaded(self) -> None:
-        """Load state from disk if not already loaded."""
+        """Load state from disk if not already loaded.
+
+        On JSON corruption, backs up the corrupted file and raises rather
+        than silently resetting to empty state (which would cause duplicate posts).
+        """
         if self._loaded:
             return
 
@@ -74,10 +132,17 @@ class StateTracker:
                     self._state[guid] = PublishedEpisode.from_dict(record)
 
                 logger.info(f"Loaded {len(self._state)} episodes from state file")
-            except (json.JSONDecodeError, IOError) as e:
-                logger.error(f"Failed to load state file: {e}")
-                self._state = {}
-                self._metadata = {}
+            except json.JSONDecodeError as e:
+                # Back up corrupted file for forensics, then raise
+                corrupted_path = self.state_file.with_suffix(".corrupted")
+                shutil.copy2(self.state_file, corrupted_path)
+                logger.critical(
+                    f"State file is corrupted (backed up to {corrupted_path}): {e}"
+                )
+                raise
+            except IOError as e:
+                logger.error(f"Failed to read state file: {e}")
+                raise
         else:
             logger.info("No existing state file, starting fresh")
             self._state = {}
@@ -86,7 +151,12 @@ class StateTracker:
         self._loaded = True
 
     def _save(self) -> None:
-        """Save state to disk."""
+        """Save state to disk atomically.
+
+        Uses the write-to-temp, fsync, rename pattern to prevent
+        corruption from crashes or power loss mid-write. Also creates
+        a .bak backup before replacing the current file.
+        """
         # Ensure parent directory exists
         self.state_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -97,8 +167,31 @@ class StateTracker:
             data["_metadata"] = self._metadata
 
         try:
-            with open(self.state_file, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+            # Write to temp file in the same directory (same filesystem for atomic rename)
+            fd, tmp_path = tempfile.mkstemp(
+                dir=self.state_file.parent,
+                prefix=".state_",
+                suffix=".tmp",
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
+
+                # Back up current state file before replacing
+                if self.state_file.exists():
+                    bak_path = self.state_file.with_suffix(".bak")
+                    shutil.copy2(self.state_file, bak_path)
+
+                # Atomic replace (POSIX rename is atomic within same filesystem)
+                os.replace(tmp_path, self.state_file)
+            except BaseException:
+                # Clean up temp file on any failure
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+                raise
+
             logger.debug(f"Saved {len(self._state)} episodes to state file")
         except IOError as e:
             logger.error(f"Failed to save state file: {e}")

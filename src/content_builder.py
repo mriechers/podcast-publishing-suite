@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import base64
 import html
+import json
 import logging
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+
+import nh3
 
 from .feed_parser import Episode
 from .ghost_client import GhostPost
@@ -16,10 +19,51 @@ from .content_transforms import transform_title, strip_boilerplate
 
 logger = logging.getLogger(__name__)
 
+# Allowed HTML tags for RSS content sanitization.
+# Strips <script>, <style>, <iframe>, event handlers, etc.
+SAFE_HTML_TAGS = {
+    "p", "br", "em", "strong", "b", "i", "a",
+    "ul", "ol", "li",
+    "h2", "h3", "h4",
+    "blockquote", "div", "span",
+}
+
+# Allowed attributes per tag
+SAFE_HTML_ATTRIBUTES = {
+    "a": {"href", "title", "target"},
+    "div": {"class", "id"},
+    "span": {"class"},
+}
+
+
+def sanitize_html(raw_html: str) -> str:
+    """Sanitize HTML from RSS feeds to prevent XSS.
+
+    Allows only safe structural/formatting tags. Strips <script>,
+    <style>, <iframe>, event handler attributes, and data: URIs.
+
+    Args:
+        raw_html: Untrusted HTML from RSS feed.
+
+    Returns:
+        Sanitized HTML string.
+    """
+    return nh3.clean(
+        raw_html,
+        tags=SAFE_HTML_TAGS,
+        attributes=SAFE_HTML_ATTRIBUTES,
+    )
+
 
 # =============================================================================
 # Pod.link Smart Links
 # =============================================================================
+
+# Default authors by feed type (Ghost user slugs)
+FEED_AUTHORS = {
+    "ttbook": [{"slug": "anne"}, {"slug": "steve"}],   # Anne Strainchamps & Steve Paulson
+    "luminous": [{"slug": "steve"}],                    # Steve Paulson
+}
 
 # Apple Podcasts IDs for our podcasts
 APPLE_PODCASTS_IDS = {
@@ -104,30 +148,14 @@ def build_listen_links_html(guid: str, feed_url: str = None) -> str:
 
 
 # =============================================================================
-# Audio Player (HTML5)
+# Audio Player
 # =============================================================================
-
-def build_html5_audio_player(enclosure_url: str, enclosure_type: str = "audio/mpeg") -> str:
-    """Build a plain HTML5 audio element for theme styling (deprecated).
-
-    Use build_audio_player_card() instead for theme-hydrated players.
-    """
-    safe_url = html.escape(enclosure_url, quote=True)
-
-    return f'''<!--kg-card-begin: html-->
-<div class="episode-audio-player">
-  <audio controls preload="metadata">
-    <source src="{safe_url}" type="{enclosure_type}">
-    Your browser does not support the audio element.
-  </audio>
-</div>
-<!--kg-card-end: html-->'''
-
 
 def build_audio_player_card(
     episode: "Episode",
     guest: Optional[str] = None,
     peaks_url: Optional[str] = None,
+    ghost_audio_url: Optional[str] = None,
 ) -> str:
     """Build a Custom HTML Card with data attributes for theme-hydrated audio player.
 
@@ -140,6 +168,9 @@ def build_audio_player_card(
         guest: Optional guest name (parsed from title if not provided).
         peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer
                    (solves CORS issues with PRX redirect URLs).
+        ghost_audio_url: Optional Ghost-hosted audio URL. When provided,
+                         used as data-audio-url (avoids CORS). The original
+                         PRX URL is preserved in data-original-audio-url.
 
     Returns:
         HTML string with Ghost card markers and data attributes.
@@ -147,8 +178,14 @@ def build_audio_player_card(
     if not episode.enclosure_url:
         return ""
 
-    # Escape all values for HTML attributes
-    audio_url = html.escape(episode.enclosure_url, quote=True)
+    # Determine which URL the player should use
+    if ghost_audio_url:
+        audio_url = html.escape(ghost_audio_url, quote=True)
+        original_url_attr = f'\n     data-original-audio-url="{html.escape(episode.enclosure_url, quote=True)}"'
+    else:
+        audio_url = html.escape(episode.enclosure_url, quote=True)
+        original_url_attr = ""
+
     artwork = html.escape(episode.image_url or "", quote=True)
     date = episode.pub_date.strftime("%Y-%m-%d")
     description = html.escape(episode.subtitle or "", quote=True)
@@ -163,7 +200,7 @@ def build_audio_player_card(
 
     return f'''<!--kg-card-begin: html-->
 <div class="wc-audio-player"
-     data-audio-url="{audio_url}"
+     data-audio-url="{audio_url}"{original_url_attr}
      data-episode-artwork="{artwork}"
      data-episode-date="{date}"
      data-episode-guest="{guest_attr}"
@@ -171,23 +208,6 @@ def build_audio_player_card(
      data-episode-duration="{duration}"
      data-episode-guid="{guid}"{peaks_attr}>
 </div>
-<!--kg-card-end: html-->'''
-
-
-def build_prx_player_embed(guid: str, feed_url: str) -> str:
-    """Build PRX embeddable player iframe (deprecated - use build_html5_audio_player).
-
-    Args:
-        guid: Episode GUID (e.g., 'prx_3329_a6ad4b02-0db2-4fa9-8cf3-95764fd1e1fe')
-        feed_url: Feed URL for the podcast
-
-    Returns:
-        HTML string with Ghost card markers for raw HTML embed.
-    """
-    encoded_feed = urllib.parse.quote(feed_url, safe='')
-
-    return f'''<!--kg-card-begin: html-->
-<iframe allow="monetization" frameborder="0" height="200" scrolling="no" src="https://play.prx.org/e?ge={guid}&uf={encoded_feed}" style="min-width: 300px;" width="100%"></iframe>
 <!--kg-card-end: html-->'''
 
 
@@ -257,13 +277,13 @@ def format_transcript_html(transcript: str) -> str:
         if line.startswith('- ['):
             bracket_end = line.find(']')
             if bracket_end > 3:
-                speaker = line[3:bracket_end]
-                content = line[bracket_end + 1:].strip()
+                speaker = html.escape(line[3:bracket_end])
+                content = html.escape(line[bracket_end + 1:].strip())
                 html_lines.append(f'<p><strong>{speaker}:</strong> {content}</p>')
             else:
-                html_lines.append(f'<p>{line}</p>')
+                html_lines.append(f'<p>{html.escape(line)}</p>')
         else:
-            html_lines.append(f'<p>{line}</p>')
+            html_lines.append(f'<p>{html.escape(line)}</p>')
 
     return '\n'.join(html_lines)
 
@@ -288,6 +308,65 @@ def extract_slug_from_link(link: str) -> Optional[str]:
 
 
 # =============================================================================
+# JSON-LD Structured Data
+# =============================================================================
+
+def build_jsonld_metadata(episode: "Episode", show_name: str) -> str:
+    """Generate JSON-LD structured data for SEO.
+
+    Stores episode categories and metadata in Schema.org format,
+    keeping them out of Ghost's tag system while preserving SEO value.
+
+    Schema.org PodcastEpisode type provides rich results in search engines,
+    including podcast-specific features like episode duration and series info.
+
+    Args:
+        episode: Parsed Episode object with metadata.
+        show_name: Name of the podcast series (e.g., 'Luminous', 'TTBOOK').
+
+    Returns:
+        HTML script tag containing JSON-LD structured data for injection
+        into Ghost's codeinjection_head field.
+    """
+    schema = {
+        "@context": "https://schema.org",
+        "@type": "PodcastEpisode",
+        "name": episode.title,
+        "description": episode.description or episode.subtitle,
+        "partOfSeries": {
+            "@type": "PodcastSeries",
+            "name": show_name
+        },
+        "keywords": episode.categories,  # RSS categories preserved here
+        "datePublished": episode.pub_date.isoformat() if episode.pub_date else None,
+        "duration": f"PT{episode.duration}S" if episode.duration and episode.duration.isdigit() else None,
+        "url": episode.link,
+    }
+
+    # Handle duration in MM:SS or HH:MM:SS format
+    if episode.duration and ":" in episode.duration:
+        parts = episode.duration.split(":")
+        try:
+            if len(parts) == 2:
+                minutes, seconds = int(parts[0]), int(parts[1])
+                total_seconds = minutes * 60 + seconds
+            elif len(parts) == 3:
+                hours, minutes, seconds = int(parts[0]), int(parts[1]), int(parts[2])
+                total_seconds = hours * 3600 + minutes * 60 + seconds
+            else:
+                total_seconds = None
+            if total_seconds:
+                schema["duration"] = f"PT{total_seconds}S"
+        except ValueError:
+            pass  # Leave duration as None if parsing fails
+
+    # Remove None values for cleaner output
+    schema = {k: v for k, v in schema.items() if v is not None}
+
+    return f'<script type="application/ld+json">\n{json.dumps(schema, indent=2)}\n</script>'
+
+
+# =============================================================================
 # Luminous Episode Builder
 # =============================================================================
 
@@ -308,6 +387,7 @@ def build_luminous_post_html(
     feed_url: str = 'https://f.prxu.org/3329/feed-rss.xml',
     transcript: Optional[str] = None,
     peaks_url: Optional[str] = None,
+    ghost_audio_url: Optional[str] = None,
 ) -> str:
     """Build HTML content for a Luminous episode post.
 
@@ -327,6 +407,7 @@ def build_luminous_post_html(
         feed_url: URL to the Luminous RSS feed for pod.link generation.
         transcript: Optional transcript text.
         peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer.
+        ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
 
     Returns:
         Complete HTML for Ghost post body.
@@ -335,16 +416,19 @@ def build_luminous_post_html(
 
     # 1. Theme-hydrated audio player with data attributes
     if episode.enclosure_url:
-        sections.append(build_audio_player_card(episode, peaks_url=peaks_url))
+        sections.append(build_audio_player_card(
+            episode, peaks_url=peaks_url, ghost_audio_url=ghost_audio_url
+        ))
 
     # Listen links removed per editorial decision — pod.link buttons
     # were not wanted in the imported Luminous content.
     # if episode.guid and feed_url:
     #     sections.append(build_listen_links_html(episode.guid, feed_url))
 
-    # 3. Episode description (from content:encoded, with boilerplate stripped)
+    # 3. Episode description (from content:encoded, with boilerplate stripped and sanitized)
     if episode.description:
         description = strip_boilerplate(episode.description, 'luminous')
+        description = sanitize_html(description)
         sections.append(description)
 
     # 4. Transcript section (only if real transcript available, not placeholder)
@@ -369,6 +453,7 @@ def build_luminous_ghost_post(
     transcript: Optional[str] = None,
     feed_url: str = 'https://f.prxu.org/3329/feed-rss.xml',
     peaks_url: Optional[str] = None,
+    ghost_audio_url: Optional[str] = None,
 ) -> GhostPost:
     """Build a GhostPost for a Luminous episode.
 
@@ -385,6 +470,7 @@ def build_luminous_ghost_post(
         transcript: Optional transcript text.
         feed_url: Luminous feed URL for player embed.
         peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer.
+        ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
 
     Returns:
         GhostPost ready for Ghost API.
@@ -395,20 +481,15 @@ def build_luminous_ghost_post(
     title = transform_title(episode.title, 'luminous')
 
     # Build HTML content with transcript if available
-    html_content = build_luminous_post_html(episode, feed_url, transcript, peaks_url)
+    html_content = build_luminous_post_html(
+        episode, feed_url, transcript, peaks_url, ghost_audio_url
+    )
 
-    # Build tags
-    tags = [
-        {'name': 'Luminous'},
-        {'name': 'Psychedelics'},
-        {'name': 'TTBOOK'},
-    ]
+    # Single show tag only - categories moved to JSON-LD structured data
+    tags = [{'name': 'Luminous'}]
 
-    # Add categories from feed
-    for cat in episode.categories:
-        cat_clean = cat.strip()
-        if cat_clean and not any(t['name'].lower() == cat_clean.lower() for t in tags):
-            tags.append({'name': cat_clean})
+    # Build JSON-LD structured data (preserves categories for SEO)
+    jsonld = build_jsonld_metadata(episode, show_name="Luminous")
 
     # Format published_at
     published_at = episode.pub_date.strftime('%Y-%m-%dT%H:%M:%S.000Z')
@@ -427,6 +508,8 @@ def build_luminous_ghost_post(
         custom_excerpt=excerpt,  # From itunes:subtitle
         canonical_url=episode.link,
         tags=tags,
+        authors=FEED_AUTHORS.get("luminous", []),
+        codeinjection_head=jsonld,
     )
 
 
@@ -489,78 +572,61 @@ def build_episode_meta_html(link: str) -> str:
 </div>'''
 
 
-def build_post_html(episode: Episode) -> str:
+def build_post_html(
+    episode: Episode,
+    feed_type: str = "ttbook",
+    peaks_url: Optional[str] = None,
+    ghost_audio_url: Optional[str] = None,
+) -> str:
     """Build the complete HTML content for a Ghost post.
 
-    Combines audio player, episode content, and metadata into
-    a single HTML document following the architecture spec.
+    Uses the theme-hydrated audio player card (same as Luminous builder)
+    and strips feed-specific boilerplate from descriptions.
 
     Args:
         episode: Parsed Episode object from RSS feed.
+        feed_type: Feed identifier for boilerplate stripping rules.
+        peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer.
+        ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
 
     Returns:
         Complete HTML string for the Ghost post body.
     """
     sections = []
 
-    # Audio player (if enclosure URL exists)
+    # Theme-hydrated audio player with data attributes
     if episode.enclosure_url:
-        sections.append(
-            build_audio_player_html(
-                episode.enclosure_url,
-                episode.duration,
-                episode.enclosure_type,
-            )
-        )
+        sections.append(build_audio_player_card(
+            episode, peaks_url=peaks_url, ghost_audio_url=ghost_audio_url
+        ))
 
-    # Episode content
+    # Episode description with boilerplate stripped and sanitized
     if episode.description:
-        sections.append(build_episode_content_html(episode.description))
+        description = strip_boilerplate(episode.description, feed_type)
+        description = sanitize_html(description)
+        sections.append(description)
 
-    # Episode metadata with link
-    if episode.link:
-        sections.append(build_episode_meta_html(episode.link))
-
-    return "\n\n".join(sections)
+    return "\n".join(sections)
 
 
 def build_tags(
     episode: Episode,
     primary_tag: str = "TTBOOK",
-    include_categories: bool = True,
-    include_episode_type: bool = True,
 ) -> list[dict]:
-    """Build Ghost tags array from episode data.
+    """Build Ghost tags array - show tag only.
+
+    RSS categories are now stored in JSON-LD structured data via
+    codeinjection_head rather than as Ghost tags. This keeps the
+    Ghost admin UI clean while preserving SEO value.
 
     Args:
-        episode: Parsed Episode object.
-        primary_tag: Primary tag to always include.
-        include_categories: Whether to include RSS categories as tags.
-        include_episode_type: Whether to include episode type as a tag.
+        episode: Parsed Episode object (unused, kept for API compatibility).
+        primary_tag: The show tag to include (e.g., 'TTBOOK', 'Luminous').
 
     Returns:
-        List of tag dicts in Ghost API format: [{'name': 'Tag'}].
+        List with single tag dict in Ghost API format: [{'name': 'Tag'}].
     """
-    tags = []
-
-    # Always include primary tag first
-    tags.append({"name": primary_tag})
-
-    # Add episode type if not 'full' (since full is default)
-    if include_episode_type and episode.episode_type and episode.episode_type != "full":
-        tags.append({"name": episode.episode_type.capitalize()})
-
-    # Add categories from RSS feed
-    if include_categories and episode.categories:
-        for category in episode.categories:
-            # Skip duplicates and primary tag
-            category_clean = category.strip()
-            if category_clean and category_clean.lower() != primary_tag.lower():
-                # Check for duplicates (case-insensitive)
-                if not any(t["name"].lower() == category_clean.lower() for t in tags):
-                    tags.append({"name": category_clean})
-
-    return tags
+    return [{"name": primary_tag}]
 
 
 def format_published_at(episode: Episode) -> str:
@@ -580,7 +646,10 @@ def format_published_at(episode: Episode) -> str:
 def build_ghost_post(
     episode: Episode,
     status: str = "draft",
-    primary_tag: str = "TTBOOK",
+    primary_tag: str = "Wonder Cabinet",
+    feed_type: str = "ttbook",
+    peaks_url: Optional[str] = None,
+    ghost_audio_url: Optional[str] = None,
 ) -> GhostPost:
     """Build a complete GhostPost from an Episode.
 
@@ -590,7 +659,10 @@ def build_ghost_post(
     Args:
         episode: Parsed Episode object from RSS feed.
         status: Post status ('draft' or 'published').
-        primary_tag: Primary tag for the post.
+        primary_tag: Primary tag for the post (used as show name for JSON-LD).
+        feed_type: Feed identifier for boilerplate stripping rules.
+        peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer.
+        ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
 
     Returns:
         GhostPost ready for Ghost API.
@@ -598,10 +670,15 @@ def build_ghost_post(
     logger.info(f"Building Ghost post for: {episode.title}")
 
     # Build HTML content
-    html_content = build_post_html(episode)
+    html_content = build_post_html(
+        episode, feed_type=feed_type, peaks_url=peaks_url, ghost_audio_url=ghost_audio_url
+    )
 
-    # Build tags
+    # Build tags (show tag only - categories in JSON-LD)
     tags = build_tags(episode, primary_tag=primary_tag)
+
+    # Build JSON-LD structured data (preserves categories for SEO)
+    jsonld = build_jsonld_metadata(episode, show_name=primary_tag)
 
     # Truncate excerpt if too long (Ghost limit is 300 chars)
     excerpt = episode.subtitle
@@ -609,6 +686,8 @@ def build_ghost_post(
         excerpt = excerpt[:297] + "..."
 
     # Build the post
+    authors = FEED_AUTHORS.get(feed_type, [])
+
     post = GhostPost(
         title=episode.title,
         html=html_content,
@@ -618,6 +697,8 @@ def build_ghost_post(
         custom_excerpt=excerpt if excerpt else None,
         canonical_url=episode.link if episode.link else None,
         tags=tags,
+        authors=authors,
+        codeinjection_head=jsonld,
     )
 
     logger.debug(f"Built post with {len(tags)} tags, status={status}")

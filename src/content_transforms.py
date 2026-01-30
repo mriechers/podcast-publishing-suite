@@ -176,11 +176,30 @@ LUMINOUS_CONFIG = FeedTransformConfig(
     ]
 )
 
-# TTBOOK main feed - add rules as needed
+# Wonder Cabinet / TTBOOK boilerplate to remove
+# Matches promotional footer paragraphs with wondercabinetproductions.com links
+# e.g., '<p><br>Visit <a href="https://wondercabinetproductions.com">...</a></p>'
+# e.g., '<p>To follow Wonder Cabinet, sign up here: <a href="https://wondercabinetproductions.com/">...</a></p>'
+WC_PROMO_FOOTER = r'''<p>\s*(?:<br\s*/?>?\s*)?(?:Visit|To follow Wonder Cabinet[^<]*)\s*<a[^>]*wondercabinetproductions\.com[^>]*>.*?</a>\s*</p>'''
+
+# "keep your subscription active" paragraph
+WC_SUBSCRIPTION_REMINDER = r'''<p>[^<]*keep your subscription active[^<]*</p>'''
+
 TTBOOK_CONFIG = FeedTransformConfig(
     feed_id="ttbook",
     removal_rules=[
-        # Add TTBOOK-specific removal rules here
+        RemovalRule(
+            name="wc_promo_footer",
+            pattern=WC_PROMO_FOOTER,
+            marker_id="wc_promo_footer",
+            description="Removes promotional footer with wondercabinetproductions.com link"
+        ),
+        RemovalRule(
+            name="wc_subscription_reminder",
+            pattern=WC_SUBSCRIPTION_REMINDER,
+            marker_id="wc_subscription_reminder",
+            description="Removes 'keep your subscription active' paragraph"
+        ),
     ]
 )
 
