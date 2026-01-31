@@ -252,8 +252,8 @@ Phase 2 (Sequential):
 You are The Conductor orchestrating the Dovetail API migration for prx-to-ghost-publisher.
 
 Context:
-- Project: /Users/markriechers/Developer/prx-to-ghost-publisher
-- Plan: /Users/markriechers/Developer/prx-to-ghost-publisher/docs/DOVETAIL_API_MIGRATION_PLAN.md
+- Project: /Users/markriechers/Developer/ghost-dev/prx-to-ghost-publisher
+- Plan: /Users/markriechers/Developer/ghost-dev/prx-to-ghost-publisher/docs/DOVETAIL_API_MIGRATION_PLAN.md
 - Existing code: src/feed_parser.py, src/config.py, src/main.py
 - API docs: knowledge/prx/DOVETAIL_API.md
 
@@ -272,7 +272,7 @@ Use the Task tool to spawn each drone with appropriate prompts from this plan.
 ```
 You are DRONE-A implementing OAuth2 authentication for the PRX Dovetail API.
 
-Project: /Users/markriechers/Developer/prx-to-ghost-publisher
+Project: /Users/markriechers/Developer/ghost-dev/prx-to-ghost-publisher
 API Docs: knowledge/prx/DOVETAIL_API.md
 
 Create src/prx_auth.py with:
@@ -292,7 +292,7 @@ Include type hints and docstrings. Handle network errors gracefully.
 ```
 You are DRONE-B implementing the Dovetail API client.
 
-Project: /Users/markriechers/Developer/prx-to-ghost-publisher
+Project: /Users/markriechers/Developer/ghost-dev/prx-to-ghost-publisher
 API Docs: knowledge/prx/DOVETAIL_API.md
 Existing Episode model: src/feed_parser.py (Episode dataclass)
 
@@ -314,7 +314,7 @@ content_builder.py and ghost_client.py expectations.
 ```
 You are DRONE-C updating configuration and CLI for Dovetail API support.
 
-Project: /Users/markriechers/Developer/prx-to-ghost-publisher
+Project: /Users/markriechers/Developer/ghost-dev/prx-to-ghost-publisher
 Existing config: src/config.py
 Existing CLI: src/main.py
 
@@ -338,7 +338,7 @@ Maintain backward compatibility - RSS remains the default.
 ```
 You are DRONE-D integrating the Dovetail API into the sync workflow.
 
-Project: /Users/markriechers/Developer/prx-to-ghost-publisher
+Project: /Users/markriechers/Developer/ghost-dev/prx-to-ghost-publisher
 
 Prerequisites (verify these exist):
 - src/prx_auth.py (PRXAuthClient)

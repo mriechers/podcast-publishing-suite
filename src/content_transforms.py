@@ -180,14 +180,81 @@ LUMINOUS_CONFIG = FeedTransformConfig(
 # Matches promotional footer paragraphs with wondercabinetproductions.com links
 # e.g., '<p><br>Visit <a href="https://wondercabinetproductions.com">...</a></p>'
 # e.g., '<p>To follow Wonder Cabinet, sign up here: <a href="https://wondercabinetproductions.com/">...</a></p>'
-WC_PROMO_FOOTER = r'''<p>\s*(?:<br\s*/?>?\s*)?(?:Visit|To follow Wonder Cabinet[^<]*)\s*<a[^>]*wondercabinetproductions\.com[^>]*>.*?</a>\s*</p>'''
+# e.g., '<p>If you love Wonder Cabinet, sign up ... <a href="https://wondercabinetproductions.com/">...</a></p>'
+WC_PROMO_FOOTER = r'''<p>\s*(?:<br\s*/?>?\s*)?(?:Visit|To follow Wonder Cabinet|If you love Wonder Cabinet)[^<]*<a[^>]*wondercabinetproductions\.com[^>]*>.*?</a>\s*</p>'''
 
 # "keep your subscription active" paragraph
 WC_SUBSCRIPTION_REMINDER = r'''<p>[^<]*keep your subscription active[^<]*</p>'''
 
+# Triple-dash dividers: <p>---</p> (with optional whitespace)
+WC_DASH_DIVIDER = r'''<p>\s*-{3,}\s*</p>'''
+
+# Chapters block: a <p>Chapters:</p> heading followed by timestamped lines
+# Matches: <p>Chapters:</p><p>00:00:00 Title<br>00:04:34 Title<br>...</p>
+WC_CHAPTERS_BLOCK = r'''<p>\s*Chapters:\s*</p>\s*<p>\s*(?:\d{2}:\d{2}:\d{2}\s+[^<]+(?:<br\s*/?>?\s*)?)+\s*</p>'''
+
+
+def _reformat_plain_text_links(content: str) -> str:
+    """Reformat link paragraphs where a plain-text title precedes a raw URL link.
+
+    PRX descriptions often contain links formatted as:
+      <p>Title text: <a href="URL"><strong>URL</strong></a></p>
+
+    This transforms them into proper links with the title as the label:
+      <p><a href="URL" target="_blank" rel="noopener noreferrer">Title text</a></p>
+
+    The colon at the end of the title text is stripped.
+    """
+    # Match: <p> optional-text : optional-whitespace <a href="URL">...(URL displayed as text)...</a></p>
+    # The title is everything before the last colon that precedes the <a> tag.
+    pattern = re.compile(
+        r'<p>\s*'                          # Opening <p>
+        r'([^<]+?)'                        # Title text (captured)
+        r'[\s\xa0]*'                       # Optional whitespace/nbsp
+        r'<a\s+href="([^"]+)"'            # <a href="URL">
+        r'[^>]*>'                          # Rest of opening tag attributes
+        r'\s*(?:<strong>)?\s*'             # Optional <strong>
+        r'https?://[^<]*?'                # The displayed URL text
+        r'\s*(?:</strong>)?\s*'            # Optional </strong>
+        r'</a>'                            # Closing </a>
+        r'\s*</p>',                        # Closing </p>
+        re.IGNORECASE,
+    )
+
+    def _reformat_match(m: re.Match) -> str:
+        title = m.group(1).strip()
+        url = m.group(2)
+        # Strip trailing colon from title
+        title = title.rstrip(':').rstrip()
+        if not title:
+            return m.group(0)  # No title text, leave unchanged
+        return (
+            f'<p><a href="{url}" target="_blank" '
+            f'rel="noopener noreferrer">{title}</a></p>'
+        )
+
+    return pattern.sub(_reformat_match, content)
+
+
 TTBOOK_CONFIG = FeedTransformConfig(
     feed_id="ttbook",
     removal_rules=[
+        # Strip chapter blocks first (before dividers, so the surrounding
+        # dividers are also caught by the divider rule)
+        RemovalRule(
+            name="wc_chapters",
+            pattern=WC_CHAPTERS_BLOCK,
+            marker_id="wc_chapters",
+            description="Removes 'Chapters:' block with timestamps"
+        ),
+        # Strip triple-dash dividers
+        RemovalRule(
+            name="wc_dividers",
+            pattern=WC_DASH_DIVIDER,
+            marker_id="wc_dividers",
+            description="Removes <p>---</p> divider paragraphs"
+        ),
+        # Strip promotional footer
         RemovalRule(
             name="wc_promo_footer",
             pattern=WC_PROMO_FOOTER,
@@ -200,7 +267,10 @@ TTBOOK_CONFIG = FeedTransformConfig(
             marker_id="wc_subscription_reminder",
             description="Removes 'keep your subscription active' paragraph"
         ),
-    ]
+    ],
+    custom_transforms=[
+        _reformat_plain_text_links,
+    ],
 )
 
 # Registry of all feed configs

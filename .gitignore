@@ -47,6 +47,7 @@ Thumbs.db
 
 # Environment variables
 .env
+.env.*
 .env.local
 
 # Logs
@@ -56,3 +57,8 @@ Thumbs.db
 *.tmp
 *.temp
 /tmp/
+
+# State file operational artifacts
+data/*.bak
+data/*.lock
+data/*.backup.*

@@ -358,7 +358,7 @@ Phase 3 (Sequential):
 
 ## References
 
-- [Architecture Document](/Users/markriechers/Developer/prx-to-ghost-publisher/docs/ARCHITECTURE.md)
-- [PRX Feed Analysis](/Users/markriechers/Developer/prx-to-ghost-publisher/knowledge/prx/PRX_FEED_STRUCTURE_ANALYSIS.md)
-- [Ghost Admin API](/Users/markriechers/Developer/prx-to-ghost-publisher/knowledge/ghost/admin-api.md)
-- [Sample PRX Feed](/Users/markriechers/Developer/prx-to-ghost-publisher/sample-data/prx-sample-feed.xml)
+- [Architecture Document](/Users/markriechers/Developer/ghost-dev/prx-to-ghost-publisher/docs/ARCHITECTURE.md)
+- [PRX Feed Analysis](/Users/markriechers/Developer/ghost-dev/prx-to-ghost-publisher/knowledge/prx/PRX_FEED_STRUCTURE_ANALYSIS.md)
+- [Ghost Admin API](/Users/markriechers/Developer/ghost-dev/prx-to-ghost-publisher/knowledge/ghost/admin-api.md)
+- [Sample PRX Feed](/Users/markriechers/Developer/ghost-dev/prx-to-ghost-publisher/sample-data/prx-sample-feed.xml)

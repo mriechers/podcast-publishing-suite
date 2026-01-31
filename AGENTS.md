@@ -8,7 +8,7 @@ This document provides project-specific guidance for AI agents working with the 
 
 **Target Podcasts:**
 - **Luminous** (`https://f.prxu.org/3329/feed-rss.xml`) → `/luminous/`
-- **Wonder Cabinet** (`https://f.prxu.org/120/ttbook`) → `/wonder-cabinet/`
+- **Wonder Cabinet** (`https://publicfeeds.net/f/120/wondercabinet`) → `/wonder-cabinet/`
 
 **Ghost Site:** [Wonder Cabinet Productions](https://wondercabinetproductions.com/)
 

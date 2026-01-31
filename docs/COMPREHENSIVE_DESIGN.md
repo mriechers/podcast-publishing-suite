@@ -18,7 +18,7 @@ The design prioritizes **long-term stability**, **minimal maintenance**, and **g
 | Podcast | Feed URL | Ghost Route |
 |---------|----------|-------------|
 | **Luminous** | `https://f.prxu.org/3329/feed-rss.xml` | `/luminous/` |
-| **Wonder Cabinet** | `https://f.prxu.org/120/ttbook` | `/wonder-cabinet/` |
+| **Wonder Cabinet** | `https://publicfeeds.net/f/120/wondercabinet` | `/wonder-cabinet/` |
 
 **Ghost Site:** https://wondercabinetproductions.com/
 
@@ -134,7 +134,7 @@ FEEDS = {
     },
     "wonder-cabinet": {
         "name": "Wonder Cabinet",
-        "feed_url": "https://f.prxu.org/120/ttbook",
+        "feed_url": "https://publicfeeds.net/f/120/wondercabinet",
         "ghost_primary_tag": "wonder-cabinet",  # Routes to /wonder-cabinet/ - PUBLIC
         "slug_prefix": "wonder-cabinet-",
         "prx_series_id": "120",
@@ -1853,7 +1853,7 @@ GHOST_ADMIN_KEY=id:secret
 
 # Feed URLs (configured in code, not environment - see config/feeds.py)
 # LUMINOUS_FEED_URL=https://f.prxu.org/3329/feed-rss.xml
-# WONDER_CABINET_FEED_URL=https://f.prxu.org/120/ttbook
+# WONDER_CABINET_FEED_URL=https://publicfeeds.net/f/120/wondercabinet
 
 # Optional
 RSS2JSON_API_KEY=your-api-key
@@ -1879,7 +1879,7 @@ FEEDS = {
     },
     "wonder-cabinet": {
         "name": "Wonder Cabinet",
-        "feed_url": "https://f.prxu.org/120/ttbook",
+        "feed_url": "https://publicfeeds.net/f/120/wondercabinet",
         "ghost_primary_tag": "wonder-cabinet",  # PUBLIC - used for routing
         "slug_prefix": "wonder-cabinet-",
         "prx_series_id": "120",

@@ -7,7 +7,7 @@
   "defaults": {
     "status": "draft",
     "author": "Wisconsin Public Radio",
-    "primary_tag": "TTBOOK"
+    "primary_tag": "Wonder Cabinet"
   },
   "state_file": "data/published_episodes.json"
 }

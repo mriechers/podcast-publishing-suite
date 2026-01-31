@@ -541,23 +541,45 @@ class DovetailClient:
         link = data.get("link") or data.get("url") or data.get("webUrl") or ""
 
         # Extract enclosure/media info
-        media = data.get("media", [])
+        # Prefer _links.enclosure — this is the stitched delivery URL that
+        # combines all segments and goes through Podtrac/Dovetail tracking.
+        # The media[] array contains raw per-segment files on f.prxu.org
+        # which are typically just the first segment, not the full episode.
         enclosure_url = ""
         enclosure_type = "audio/mpeg"
 
-        if media and isinstance(media, list) and len(media) > 0:
-            first_media = media[0]
-            enclosure_url = first_media.get("href") or first_media.get("url", "")
-            enclosure_type = first_media.get("type", "audio/mpeg")
+        links = data.get("_links", {})
+        enclosure_link = links.get("enclosure", {})
+        if enclosure_link and enclosure_link.get("href"):
+            enclosure_url = enclosure_link["href"]
+            enclosure_type = enclosure_link.get("type", "audio/mpeg")
         elif data.get("enclosure"):
             enc = data["enclosure"]
             enclosure_url = enc.get("url", "")
             enclosure_type = enc.get("type", "audio/mpeg")
-        elif data.get("audioUrl"):
-            enclosure_url = data["audioUrl"]
+        else:
+            media = data.get("media", [])
+            if media and isinstance(media, list) and len(media) > 0:
+                first_media = media[0]
+                enclosure_url = first_media.get("href") or first_media.get("url", "")
+                enclosure_type = first_media.get("type", "audio/mpeg")
+            elif data.get("audioUrl"):
+                enclosure_url = data["audioUrl"]
 
-        # Extract duration
-        duration = data.get("duration") or data.get("itunes:duration") or "00:00"
+        # Extract duration — prefer _links.enclosure.duration (total stitched
+        # duration in seconds) over the top-level field
+        duration = ""
+        if enclosure_link and enclosure_link.get("duration"):
+            raw_dur = enclosure_link["duration"]
+            if isinstance(raw_dur, (int, float)) and raw_dur > 0:
+                minutes, seconds = divmod(int(raw_dur), 60)
+                hours, minutes = divmod(minutes, 60)
+                if hours:
+                    duration = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+                else:
+                    duration = f"{minutes:02d}:{seconds:02d}"
+        if not duration:
+            duration = data.get("duration") or data.get("itunes:duration") or "00:00"
         if isinstance(duration, (int, float)):
             # Convert seconds to HH:MM:SS
             minutes, seconds = divmod(int(duration), 60)
@@ -568,6 +590,8 @@ class DovetailClient:
                 duration = f"{minutes:02d}:{seconds:02d}"
 
         # Extract image URL
+        # Try episode-level fields first, then fall back to podcastImage
+        # (the show-level artwork attached to each episode in the API response)
         image_url = (
             data.get("imageUrl")
             or data.get("image")
@@ -576,6 +600,10 @@ class DovetailClient:
         )
         if isinstance(image_url, dict):
             image_url = image_url.get("href", "")
+        if not image_url:
+            podcast_image = data.get("podcastImage")
+            if isinstance(podcast_image, dict):
+                image_url = podcast_image.get("href", "")
 
         # Extract categories
         categories = []
