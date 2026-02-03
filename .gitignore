@@ -1,0 +1,37 @@
+# Audio files
+*.mp3
+*.wav
+*.m4a
+*.flac
+*.ogg
+*.aac
+*.wma
+*.opus
+
+# Video files
+*.mp4
+*.mkv
+*.webm
+*.avi
+*.mov
+*.m4v
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Whisper model caches
+*.pt
+*.bin
+
+# Environment
+.env
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/
