@@ -129,6 +129,8 @@ ghost_key = get_secret("GHOST_ADMIN_KEY")
 
 ```
 ├── docs/                    # Design documents and guides
+├── images/                  # Static assets used during publishing
+│   └── og-left-logo.png     # OG image background with Wonder Cabinet branding (1200×630)
 ├── knowledge/               # Reference documentation and API specs
 ├── sample-data/             # Sample PRX feed data
 │   └── ttbook-cache/        # Archived TTBOOK.org transcripts
@@ -156,7 +158,9 @@ All published posts must include:
 - **Content** - Episode description + PRX player embed
 - **Tags** - Show tag (`luminous` or `wonder-cabinet`), routing tag (`#show-<name>`), and `Podcast`
 - **Custom Excerpt** - Episode summary for listing pages
-- **Featured Image** - Episode artwork from RSS enclosure
+- **Featured Image** - Episode artwork uploaded to Ghost (falls back to PRX URL)
+- **OG Image** - 1200×630 composite for social sharing (artwork right-justified on `images/og-left-logo.png` branded background)
+- **Twitter Image** - Same as OG image
 
 ### GitHub Actions Workflow
 

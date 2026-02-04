@@ -1241,7 +1241,7 @@ gh workflow run publish-episodes.yml
 
 - Transcript support (if available in feed)
 - Chapter markers → post sections
-- Social share image generation
+- ~~Social share image generation~~ *(implemented — see ARCHITECTURE.md § Image Pipeline)*
 - Web dashboard for monitoring
 
 ---

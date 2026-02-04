@@ -47,6 +47,8 @@ class GhostPost:
     canonical_url: Optional[str] = None
     tags: list[dict] = field(default_factory=list)
     authors: list[dict] = field(default_factory=list)
+    og_image: Optional[str] = None
+    twitter_image: Optional[str] = None
     codeinjection_head: Optional[str] = None
 
     def to_api_dict(self) -> dict[str, Any]:
@@ -69,6 +71,10 @@ class GhostPost:
             data["tags"] = self.tags
         if self.authors:
             data["authors"] = self.authors
+        if self.og_image:
+            data["og_image"] = self.og_image
+        if self.twitter_image:
+            data["twitter_image"] = self.twitter_image
         if self.codeinjection_head:
             data["codeinjection_head"] = self.codeinjection_head
 
@@ -488,6 +494,30 @@ class GhostClient:
         ext = file_path.suffix.lower()
         content_type = mime_types.get(ext, "audio/mpeg")
         return self._upload_to_endpoint(file_path, "media/upload", content_type)
+
+    def upload_image(self, file_path: Path) -> str:
+        """Upload an image to Ghost's image library.
+
+        Args:
+            file_path: Local path to the image file (jpg, png, gif, webp, svg).
+
+        Returns:
+            URL to the uploaded image on Ghost.
+
+        Raises:
+            GhostAPIError: If upload fails.
+        """
+        mime_types = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif",
+            ".webp": "image/webp",
+            ".svg": "image/svg+xml",
+        }
+        ext = file_path.suffix.lower()
+        content_type = mime_types.get(ext, "image/jpeg")
+        return self._upload_to_endpoint(file_path, "images/upload", content_type)
 
     def upload_file(self, file_path: Path) -> str:
         """Upload a general file to Ghost's file library.

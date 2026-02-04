@@ -138,17 +138,14 @@ def get_config(reload: bool = False, env_name: str = "dev") -> Config:
     # Determine project root (where .env and config.json live)
     project_root = Path(__file__).parent.parent
 
-    # Load environment-specific .env file, falling back to .env
+    # Load environment-specific .env file (no fallback to .env)
     env_path = project_root / f".env.{env_name}"
     if not env_path.exists():
-        env_path = project_root / ".env"
-    if env_path.exists():
-        load_dotenv(env_path, override=True)
-    else:
         raise ConfigError(
-            f"No .env file found for environment '{env_name}'. "
-            f"Expected: .env.{env_name} or .env"
+            f"Environment file not found: .env.{env_name}\n"
+            f"Copy .env.example to .env.{env_name} and fill in credentials."
         )
+    load_dotenv(env_path, override=True)
 
     # Load config.json for defaults
     config_json_path = project_root / "config.json"

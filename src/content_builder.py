@@ -156,6 +156,7 @@ def build_audio_player_card(
     guest: Optional[str] = None,
     peaks_url: Optional[str] = None,
     ghost_audio_url: Optional[str] = None,
+    ghost_image_url: Optional[str] = None,
 ) -> str:
     """Build a Custom HTML Card with data attributes for theme-hydrated audio player.
 
@@ -171,6 +172,9 @@ def build_audio_player_card(
         ghost_audio_url: Optional Ghost-hosted audio URL. When provided,
                          used as data-audio-url (avoids CORS). The original
                          PRX URL is preserved in data-original-audio-url.
+        ghost_image_url: Optional Ghost-hosted image URL for artwork.
+                         When provided, used for data-episode-artwork instead
+                         of the original PRX image URL.
 
     Returns:
         HTML string with Ghost card markers and data attributes.
@@ -186,7 +190,7 @@ def build_audio_player_card(
         audio_url = html.escape(episode.enclosure_url, quote=True)
         original_url_attr = ""
 
-    artwork = html.escape(episode.image_url or "", quote=True)
+    artwork = html.escape(ghost_image_url or episode.image_url or "", quote=True)
     date = episode.pub_date.strftime("%Y-%m-%d")
     description = html.escape(episode.subtitle or "", quote=True)
     duration = html.escape(episode.duration or "", quote=True)
@@ -388,6 +392,7 @@ def build_luminous_post_html(
     transcript: Optional[str] = None,
     peaks_url: Optional[str] = None,
     ghost_audio_url: Optional[str] = None,
+    ghost_image_url: Optional[str] = None,
 ) -> str:
     """Build HTML content for a Luminous episode post.
 
@@ -408,6 +413,7 @@ def build_luminous_post_html(
         transcript: Optional transcript text.
         peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer.
         ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
+        ghost_image_url: Optional Ghost-hosted image URL for artwork.
 
     Returns:
         Complete HTML for Ghost post body.
@@ -417,7 +423,8 @@ def build_luminous_post_html(
     # 1. Theme-hydrated audio player with data attributes
     if episode.enclosure_url:
         sections.append(build_audio_player_card(
-            episode, peaks_url=peaks_url, ghost_audio_url=ghost_audio_url
+            episode, peaks_url=peaks_url, ghost_audio_url=ghost_audio_url,
+            ghost_image_url=ghost_image_url,
         ))
 
     # Listen links removed per editorial decision — pod.link buttons
@@ -454,6 +461,8 @@ def build_luminous_ghost_post(
     feed_url: str = 'https://f.prxu.org/3329/feed-rss.xml',
     peaks_url: Optional[str] = None,
     ghost_audio_url: Optional[str] = None,
+    ghost_image_url: Optional[str] = None,
+    og_image_url: Optional[str] = None,
 ) -> GhostPost:
     """Build a GhostPost for a Luminous episode.
 
@@ -471,6 +480,8 @@ def build_luminous_ghost_post(
         feed_url: Luminous feed URL for player embed.
         peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer.
         ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
+        ghost_image_url: Optional Ghost-hosted image URL for feature_image and artwork.
+        og_image_url: Optional Ghost-hosted OG image URL (1200x630).
 
     Returns:
         GhostPost ready for Ghost API.
@@ -482,7 +493,8 @@ def build_luminous_ghost_post(
 
     # Build HTML content with transcript if available
     html_content = build_luminous_post_html(
-        episode, feed_url, transcript, peaks_url, ghost_audio_url
+        episode, feed_url, transcript, peaks_url, ghost_audio_url,
+        ghost_image_url=ghost_image_url,
     )
 
     # Single show tag only - categories moved to JSON-LD structured data
@@ -504,11 +516,13 @@ def build_luminous_ghost_post(
         html=html_content,
         status=status,
         published_at=published_at,
-        feature_image=episode.image_url,  # Episode-specific art from itunes:image
+        feature_image=ghost_image_url or episode.image_url,  # Prefer Ghost-hosted
         custom_excerpt=excerpt,  # From itunes:subtitle
         canonical_url=episode.link,
         tags=tags,
         authors=FEED_AUTHORS.get("luminous", []),
+        og_image=og_image_url,
+        twitter_image=og_image_url,
         codeinjection_head=jsonld,
     )
 
@@ -577,6 +591,7 @@ def build_post_html(
     feed_type: str = "ttbook",
     peaks_url: Optional[str] = None,
     ghost_audio_url: Optional[str] = None,
+    ghost_image_url: Optional[str] = None,
 ) -> str:
     """Build the complete HTML content for a Ghost post.
 
@@ -588,6 +603,7 @@ def build_post_html(
         feed_type: Feed identifier for boilerplate stripping rules.
         peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer.
         ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
+        ghost_image_url: Optional Ghost-hosted image URL for artwork.
 
     Returns:
         Complete HTML string for the Ghost post body.
@@ -597,7 +613,8 @@ def build_post_html(
     # Theme-hydrated audio player with data attributes
     if episode.enclosure_url:
         sections.append(build_audio_player_card(
-            episode, peaks_url=peaks_url, ghost_audio_url=ghost_audio_url
+            episode, peaks_url=peaks_url, ghost_audio_url=ghost_audio_url,
+            ghost_image_url=ghost_image_url,
         ))
 
     # Episode description with boilerplate stripped and sanitized
@@ -650,6 +667,8 @@ def build_ghost_post(
     feed_type: str = "ttbook",
     peaks_url: Optional[str] = None,
     ghost_audio_url: Optional[str] = None,
+    ghost_image_url: Optional[str] = None,
+    og_image_url: Optional[str] = None,
 ) -> GhostPost:
     """Build a complete GhostPost from an Episode.
 
@@ -663,6 +682,8 @@ def build_ghost_post(
         feed_type: Feed identifier for boilerplate stripping rules.
         peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer.
         ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
+        ghost_image_url: Optional Ghost-hosted image URL for feature_image and artwork.
+        og_image_url: Optional Ghost-hosted OG image URL (1200x630).
 
     Returns:
         GhostPost ready for Ghost API.
@@ -671,7 +692,8 @@ def build_ghost_post(
 
     # Build HTML content
     html_content = build_post_html(
-        episode, feed_type=feed_type, peaks_url=peaks_url, ghost_audio_url=ghost_audio_url
+        episode, feed_type=feed_type, peaks_url=peaks_url,
+        ghost_audio_url=ghost_audio_url, ghost_image_url=ghost_image_url,
     )
 
     # Build tags (show tag only - categories in JSON-LD)
@@ -693,11 +715,13 @@ def build_ghost_post(
         html=html_content,
         status=status,
         published_at=format_published_at(episode),
-        feature_image=episode.image_url if episode.image_url else None,
+        feature_image=ghost_image_url or episode.image_url or None,  # Prefer Ghost-hosted
         custom_excerpt=excerpt if excerpt else None,
         canonical_url=episode.link if episode.link else None,
         tags=tags,
         authors=authors,
+        og_image=og_image_url,
+        twitter_image=og_image_url,
         codeinjection_head=jsonld,
     )
 

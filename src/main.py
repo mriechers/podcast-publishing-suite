@@ -44,6 +44,7 @@ from .feed_parser import (
 from .prx_auth import PRXAuthClient, PRXAuthError
 from .dovetail_client import DovetailClient, DovetailAPIError
 from .ghost_client import GhostAPIError, GhostClient, GhostPost
+from .og_image import download_image, generate_og_image
 from .state_tracker import StateLockError, StateTracker
 
 # Exit codes for CI/CD differentiation
@@ -112,6 +113,38 @@ def sync_episodes(
             logger.info(f"Skipping (already published): {episode.title}")
             skipped += 1
             continue
+
+        # Image processing pipeline: download artwork → upload to Ghost → generate OG image
+        ghost_image_url = None
+        og_image_url = None
+
+        if episode.image_url and not dry_run:
+            img_temp_dir = Path(tempfile.mkdtemp(prefix="ghost_img_"))
+            try:
+                # Download square art from PRX
+                img_path = download_image(episode.image_url, img_temp_dir)
+
+                # Upload square art to Ghost → feature_image
+                try:
+                    ghost_image_url = client.upload_image(img_path)
+                    logger.info(f"  Ghost image URL: {ghost_image_url}")
+                except GhostAPIError as e:
+                    logger.warning(f"  Image upload failed, using PRX URL: {e}")
+
+                # Generate OG image (1200x630, black background)
+                try:
+                    og_path = generate_og_image(img_path, img_temp_dir / "og_image.jpg")
+                    og_image_url = client.upload_image(og_path)
+                    logger.info(f"  Ghost OG image URL: {og_image_url}")
+                except GhostAPIError as e:
+                    logger.warning(f"  OG image upload failed: {e}")
+                except Exception as e:
+                    logger.warning(f"  OG image generation failed: {e}")
+
+            except Exception as e:
+                logger.warning(f"  Image processing failed, using PRX URL: {e}")
+            finally:
+                shutil.rmtree(img_temp_dir, ignore_errors=True)
 
         # Build the Ghost post based on feed type
         if feed_type == "luminous":
@@ -209,9 +242,14 @@ def sync_episodes(
                 feed_url=feed_url or LUMINOUS_FEED_URL,
                 peaks_url=peaks_url,
                 ghost_audio_url=ghost_audio_url,
+                ghost_image_url=ghost_image_url,
+                og_image_url=og_image_url,
             )
         else:
-            ghost_post = build_ghost_post(episode, status=status, primary_tag=primary_tag)
+            ghost_post = build_ghost_post(
+                episode, status=status, primary_tag=primary_tag,
+                ghost_image_url=ghost_image_url, og_image_url=og_image_url,
+            )
 
         if dry_run:
             logger.info(f"[DRY RUN] Would publish: {episode.title}")
@@ -270,6 +308,33 @@ def cmd_sync(args: argparse.Namespace) -> int:
     feed_type = args.feed_type
     source = args.source
     json_output = getattr(args, 'json_output', False)
+    skip_confirm = getattr(args, 'yes', False)
+
+    # Environment banner (ANSI colors: green for dev, red for prod)
+    # Use sys.stderr to stay in sync with logging output
+    if args.env == "prod":
+        sys.stderr.write("\033[0;31m" + "=" * 60 + "\n")
+        sys.stderr.write(f"  PRODUCTION  ·  {config.ghost_url}\n")
+        sys.stderr.write("=" * 60 + "\033[0m\n")
+    else:
+        sys.stderr.write("\033[0;32m" + "=" * 60 + "\n")
+        sys.stderr.write(f"  DEV  ·  {config.ghost_url}\n")
+        sys.stderr.write("=" * 60 + "\033[0m\n")
+    sys.stderr.flush()
+
+    # Production confirmation prompt
+    if args.env == "prod" and not dry_run and not skip_confirm:
+        try:
+            confirm = input(
+                "\033[1;33m⚠  Sync to PRODUCTION — continue? [y/N] \033[0m"
+            )
+            if confirm.strip().lower() not in ("y", "yes"):
+                logger.info("Aborted by user.")
+                return EXIT_SUCCESS
+        except (EOFError, KeyboardInterrupt):
+            print()
+            logger.info("Aborted.")
+            return EXIT_SUCCESS
 
     # Determine if we should use API
     use_api = source == "api" or config.use_dovetail_api
@@ -897,6 +962,11 @@ def main(argv: Optional[list[str]] = None) -> int:
         action="store_true",
         help="Emit structured JSON summary to stdout (for CI/CD consumption)",
     )
+    sync_parser.add_argument(
+        "--yes", "-y",
+        action="store_true",
+        help="Skip confirmation prompts (for automation/CI)",
+    )
     sync_parser.set_defaults(func=cmd_sync)
 
     # list command
@@ -965,6 +1035,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         peaks_dir=None,
         upload_audio=False,
         json_output=False,
+        yes=False,
     )
 
     args = parser.parse_args(argv)

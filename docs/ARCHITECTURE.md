@@ -28,7 +28,7 @@ A Python-based automation tool that fetches TTBOOK episodes from the PRX/Dovetai
 - Convert RSS item fields to Ghost post structure
 - Generate HTML content with embedded audio player
 - Map categories to Ghost tags
-- Download and cache episode artwork for featured images
+- Download episode artwork, upload to Ghost, and generate OG images
 
 ### 3. Publish Phase
 - Authenticate with Ghost Admin API (JWT)
@@ -52,7 +52,9 @@ A Python-based automation tool that fetches TTBOOK episodes from the PRX/Dovetai
 | `<pubDate>` | `published_at` | Parse RFC 2822 date |
 | `<link>` | `canonical_url` | ttbook.org episode page |
 | `<content:encoded>` | `html` (partial) | Rich HTML description |
-| `<itunes:image href>` | `feature_image` | Episode artwork URL |
+| `<itunes:image href>` | `feature_image` | Downloaded, uploaded to Ghost (falls back to PRX URL) |
+| *(generated)* | `og_image` | 1200x630 OG image composited from artwork + background |
+| *(generated)* | `twitter_image` | Same as `og_image` |
 | `<itunes:subtitle>` | `custom_excerpt` | Short description |
 | `<itunes:duration>` | Embedded in HTML | e.g., "52:02" |
 | `<enclosure url>` | Embedded audio player | Audio file URL |
@@ -222,6 +224,7 @@ prx-to-ghost-publisher/
 │   ├── feed_parser.py       # RSS feed fetching/parsing
 │   ├── ghost_client.py      # Ghost Admin API client
 │   ├── content_builder.py   # HTML generation for posts
+│   ├── og_image.py          # OG image download + generation
 │   ├── state_tracker.py     # Duplicate prevention
 │   └── config.py            # Configuration management
 ├── data/
@@ -235,6 +238,8 @@ prx-to-ghost-publisher/
 │   └── (existing scripts...)
 ├── knowledge/
 │   └── ghost/               # Ghost API docs (existing)
+├── images/
+│   └── og-left-logo.png       # OG image background with Wonder Cabinet branding (1200x630)
 ├── sample-data/
 │   └── prx-sample-feed.xml  # Test data (existing)
 ├── .env.example
@@ -409,6 +414,69 @@ When generating Ghost post HTML, the content builder:
 1. Checks if a transcript exists for the episode slug
 2. Converts the transcript to HTML with speaker formatting
 3. Appends the transcript section after episode content
+
+---
+
+## Image Pipeline
+
+### Overview
+
+Episode artwork goes through a three-step pipeline during sync:
+
+```
+PRX itunes:image URL
+        │
+        ▼
+  download_image()          → temp file on disk
+        │
+        ├─► upload_image()  → Ghost /images/upload/ → feature_image URL
+        │
+        ▼
+  generate_og_image()       → 1200×630 JPEG (artwork on background)
+        │
+        └─► upload_image()  → Ghost /images/upload/ → og_image + twitter_image URL
+```
+
+### OG Image Generation
+
+Social platforms (Facebook, Twitter/X, LinkedIn) display shared links as 1.91:1 cards (1200×630px). Podcast artwork is always square, so sharing a post with just the square art results in awkward cropping or tiny thumbnails.
+
+`generate_og_image()` composites the square artwork centered on a 1200×630 background canvas:
+
+- **Background**: Uses `images/og-left-logo.png` by default (Wonder Cabinet branding on the left). Falls back to solid black if the file is missing.
+- **Artwork sizing**: Resized to fit the 630px canvas height, right-justified so it sits opposite the branding.
+- **Output**: JPEG at 85% quality for a good size/quality balance.
+
+### Customizing the Background
+
+Replace `images/og-swirl.png` with any 1200×630 PNG. The image will be used as-is (resized if dimensions differ). Keep the design dark or muted so episode artwork stays the focal point.
+
+You can also pass a custom path per-call:
+
+```python
+generate_og_image(artwork_path, output_path, background_path=Path("images/custom-bg.png"))
+```
+
+### Ghost Post Fields
+
+| Ghost Field | Source | Notes |
+|-------------|--------|-------|
+| `feature_image` | Ghost-hosted square artwork | Falls back to PRX URL if upload fails |
+| `og_image` | Ghost-hosted 1200×630 composite | Used for Facebook/LinkedIn cards |
+| `twitter_image` | Same as `og_image` | Twitter/X card image |
+| `data-episode-artwork` | Ghost-hosted square artwork | Used by the theme's audio player |
+
+### Graceful Degradation
+
+Every step in the pipeline is independently wrapped in try/except:
+
+- Image download fails → use original PRX URL for `feature_image`, no `og_image` set
+- Square art upload fails → same fallback
+- OG generation fails → square art still uploaded, no `og_image`
+- OG upload fails → square art still uploaded, no `og_image`
+- Dry run → skip image processing entirely, use PRX URLs as-is
+
+Ghost falls back to `feature_image` for social cards when `og_image` is not set, so the post always has *some* image.
 
 ---
 
