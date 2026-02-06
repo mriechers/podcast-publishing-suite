@@ -1,4 +1,4 @@
-"""Tests for feed parser: URL validation, XML parsing, error handling."""
+"""Tests for feed parser: URL validation, XML parsing, error handling, transcript parsing."""
 
 from __future__ import annotations
 
@@ -13,6 +13,102 @@ from src.feed_parser import (
     _validate_feed_url,
     parse_feed,
 )
+
+
+class TestTranscriptParsing:
+    """Validate <podcast:transcript> RSS parsing."""
+
+    def test_single_transcript_parsed(self):
+        """Single <podcast:transcript> element should be parsed."""
+        xml = """<?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0" xmlns:podcast="https://podcastindex.org/namespace/1.0">
+          <channel>
+            <title>Test</title>
+            <item>
+              <guid>test-guid-1</guid>
+              <title>Episode With Transcript</title>
+              <podcast:transcript url="https://example.com/transcript.txt" type="text/plain" />
+            </item>
+          </channel>
+        </rss>
+        """
+        episodes = parse_feed(xml)
+        assert len(episodes) == 1
+        assert episodes[0].transcript_url == "https://example.com/transcript.txt"
+        assert episodes[0].transcript_type == "text/plain"
+
+    def test_type_preference_html_over_json_over_plain(self):
+        """text/html should be preferred over application/json over text/plain."""
+        xml = """<?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0" xmlns:podcast="https://podcastindex.org/namespace/1.0">
+          <channel>
+            <title>Test</title>
+            <item>
+              <guid>test-guid-2</guid>
+              <title>Multi-Transcript Episode</title>
+              <podcast:transcript url="https://example.com/t.txt" type="text/plain" />
+              <podcast:transcript url="https://example.com/t.json" type="application/json" />
+              <podcast:transcript url="https://example.com/t.html" type="text/html" />
+            </item>
+          </channel>
+        </rss>
+        """
+        episodes = parse_feed(xml)
+        assert episodes[0].transcript_url == "https://example.com/t.html"
+        assert episodes[0].transcript_type == "text/html"
+
+    def test_json_preferred_over_plain(self):
+        """application/json should be preferred over text/plain."""
+        xml = """<?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0" xmlns:podcast="https://podcastindex.org/namespace/1.0">
+          <channel>
+            <title>Test</title>
+            <item>
+              <guid>test-guid-3</guid>
+              <title>JSON and Plain</title>
+              <podcast:transcript url="https://example.com/t.txt" type="text/plain" />
+              <podcast:transcript url="https://example.com/t.json" type="application/json" />
+            </item>
+          </channel>
+        </rss>
+        """
+        episodes = parse_feed(xml)
+        assert episodes[0].transcript_url == "https://example.com/t.json"
+        assert episodes[0].transcript_type == "application/json"
+
+    def test_missing_transcript_defaults_empty(self):
+        """Episodes without <podcast:transcript> should have empty transcript fields."""
+        xml = """<?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0" xmlns:podcast="https://podcastindex.org/namespace/1.0">
+          <channel>
+            <title>Test</title>
+            <item>
+              <guid>test-guid-4</guid>
+              <title>No Transcript</title>
+            </item>
+          </channel>
+        </rss>
+        """
+        episodes = parse_feed(xml)
+        assert episodes[0].transcript_url == ""
+        assert episodes[0].transcript_type == ""
+
+    def test_transcript_without_url_skipped(self):
+        """<podcast:transcript> without url attribute should be ignored."""
+        xml = """<?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0" xmlns:podcast="https://podcastindex.org/namespace/1.0">
+          <channel>
+            <title>Test</title>
+            <item>
+              <guid>test-guid-5</guid>
+              <title>Bad Transcript Tag</title>
+              <podcast:transcript type="text/plain" />
+            </item>
+          </channel>
+        </rss>
+        """
+        episodes = parse_feed(xml)
+        assert episodes[0].transcript_url == ""
 
 
 class TestFeedURLValidation:

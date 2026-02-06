@@ -21,8 +21,11 @@ from .content_builder import (
     build_ghost_post,
     build_jsonld_metadata,
     build_luminous_ghost_post,
+    build_transcript_section_html,
     extract_slug_from_link,
+    fetch_rss_transcript,
     format_published_at,
+    format_rss_transcript_html,
     load_transcript,
 )
 from .waveform_peaks import (
@@ -168,6 +171,15 @@ def sync_episodes(
                     except Exception as e:
                         logger.warning(f"  Failed to export transcript: {e}")
 
+            # RSS transcript fallback: if no cached transcript, try RSS <podcast:transcript>
+            rss_transcript_html = None
+            if not transcript and episode.transcript_url:
+                logger.info(f"  Fetching RSS transcript: {episode.transcript_url}")
+                raw = fetch_rss_transcript(episode.transcript_url, episode.transcript_type)
+                if raw:
+                    rss_transcript_html = format_rss_transcript_html(raw, episode.transcript_type)
+                    logger.info(f"  Formatted RSS transcript ({episode.transcript_type})")
+
             # Audio upload + peaks generation pipeline
             peaks_url = None
             ghost_audio_url = None
@@ -244,11 +256,22 @@ def sync_episodes(
                 ghost_audio_url=ghost_audio_url,
                 ghost_image_url=ghost_image_url,
                 og_image_url=og_image_url,
+                transcript_html=rss_transcript_html,
             )
         else:
+            # Fetch RSS transcript if available
+            ttbook_transcript_html = None
+            if episode.transcript_url:
+                logger.info(f"  Fetching RSS transcript: {episode.transcript_url}")
+                raw = fetch_rss_transcript(episode.transcript_url, episode.transcript_type)
+                if raw:
+                    ttbook_transcript_html = format_rss_transcript_html(raw, episode.transcript_type)
+                    logger.info(f"  Formatted RSS transcript ({episode.transcript_type})")
+
             ghost_post = build_ghost_post(
                 episode, status=status, primary_tag=primary_tag,
                 ghost_image_url=ghost_image_url, og_image_url=og_image_url,
+                transcript_html=ttbook_transcript_html,
             )
 
         if dry_run:
@@ -867,6 +890,157 @@ def cmd_update_metadata(args: argparse.Namespace) -> int:
     return 0 if failed == 0 else 1
 
 
+def cmd_update_transcripts(args: argparse.Namespace) -> int:
+    """Handle the update-transcripts command.
+
+    Fetches RSS transcripts and adds them to existing Ghost posts
+    that don't yet have transcripts.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    try:
+        config = get_config(env_name=args.env)
+    except ConfigError as e:
+        logger.error(f"Configuration error: {e}")
+        return 1
+
+    dry_run = args.dry_run
+    target_guid = getattr(args, 'guid', None)
+
+    # Determine feed URL
+    if args.feed_url:
+        feed_url = args.feed_url
+    else:
+        feed_url = LUMINOUS_FEED_URL
+
+    logger.info(f"Starting transcript update (dry_run={dry_run})")
+
+    # Load state tracker
+    tracker = StateTracker(config.state_file)
+    published = tracker.get_all_published()
+
+    if not published:
+        logger.info("No published episodes found in state tracker.")
+        return 0
+
+    # Filter to episodes that haven't had transcripts synced
+    candidates = {}
+    for guid, ep_state in published.items():
+        if target_guid and guid != target_guid:
+            continue
+        if ep_state.transcript_synced:
+            continue
+        if ep_state.status == "failed":
+            continue
+        candidates[guid] = ep_state
+
+    if not candidates:
+        logger.info("No episodes need transcript updates.")
+        return 0
+
+    logger.info(f"Found {len(candidates)} candidate episodes for transcript update")
+
+    # Fetch current RSS feed to get transcript URLs
+    try:
+        logger.info(f"Fetching feed: {feed_url}")
+        feed_episodes = get_episodes(feed_url)
+        episodes_by_guid = {ep.guid: ep for ep in feed_episodes}
+        logger.info(f"Found {len(feed_episodes)} episodes in feed")
+    except (FeedFetchError, FeedParseError) as e:
+        logger.error(f"Failed to fetch feed: {e}")
+        return 1
+
+    # Initialize Ghost client
+    if not dry_run:
+        client = GhostClient(
+            config.ghost_url,
+            config.ghost_admin_api_key,
+            config.ghost_api_version,
+        )
+        try:
+            client.test_connection()
+        except GhostAPIError as e:
+            logger.error(f"Ghost connection failed: {e}")
+            return 1
+    else:
+        client = None
+
+    updated = 0
+    skipped = 0
+    failed = 0
+
+    for guid, ep_state in candidates.items():
+        title = ep_state.title
+        ghost_post_id = ep_state.ghost_post_id
+
+        # Find episode in RSS feed
+        episode = episodes_by_guid.get(guid)
+        if not episode or not episode.transcript_url:
+            logger.debug(f"No transcript URL for: {title}")
+            skipped += 1
+            continue
+
+        if dry_run:
+            logger.info(f"[DRY RUN] Would add transcript to: {title}")
+            logger.info(f"  Transcript URL: {episode.transcript_url}")
+            logger.info(f"  Transcript type: {episode.transcript_type}")
+            updated += 1
+            continue
+
+        # Fetch current Ghost post to check for existing transcript
+        try:
+            current_post = client.get_post(ghost_post_id)
+            current_html = current_post.get("html", "")
+            updated_at = current_post.get("updated_at")
+
+            if not updated_at:
+                logger.error(f"No updated_at for post: {title}")
+                failed += 1
+                continue
+
+            # Skip if transcript already present in post
+            if 'id="episode-transcript"' in current_html:
+                logger.info(f"Transcript already present: {title}")
+                tracker.record_transcript_synced(guid)
+                skipped += 1
+                continue
+
+            # Fetch and format transcript from RSS
+            raw = fetch_rss_transcript(episode.transcript_url, episode.transcript_type)
+            if not raw:
+                logger.warning(f"Failed to fetch transcript for: {title}")
+                skipped += 1
+                continue
+
+            transcript_html = format_rss_transcript_html(raw, episode.transcript_type)
+            if not transcript_html:
+                logger.warning(f"Empty transcript after formatting: {title}")
+                skipped += 1
+                continue
+
+            # Append transcript section to existing post HTML
+            transcript_section = build_transcript_section_html(transcript_html)
+            new_html = current_html + "\n" + transcript_section
+
+            # Update the Ghost post
+            update_post = GhostPost(
+                title=current_post.get("title", title),
+                html=new_html,
+            )
+            client.update_post(ghost_post_id, update_post, updated_at)
+            tracker.record_transcript_synced(guid)
+            logger.info(f"Added transcript to: {title}")
+            updated += 1
+
+        except GhostAPIError as e:
+            logger.error(f"Failed to update '{title}': {e}")
+            failed += 1
+
+    logger.info(f"Transcript update complete: {updated} updated, {skipped} skipped, {failed} failed")
+    return 0 if failed == 0 else 1
+
+
 def main(argv: Optional[list[str]] = None) -> int:
     """Main entry point.
 
@@ -1018,6 +1192,26 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="Override feed URL",
     )
     update_parser.set_defaults(func=cmd_update_metadata)
+
+    # update-transcripts command
+    transcript_parser = subparsers.add_parser(
+        "update-transcripts",
+        help="Add RSS transcripts to existing Ghost posts that don't have them yet",
+    )
+    transcript_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would be updated without making changes",
+    )
+    transcript_parser.add_argument(
+        "--guid",
+        help="Update only the episode with this GUID",
+    )
+    transcript_parser.add_argument(
+        "--feed-url",
+        help="Override feed URL (default: Luminous feed)",
+    )
+    transcript_parser.set_defaults(func=cmd_update_transcripts)
 
     # Set defaults on the main parser so no-subcommand invocation works
     parser.set_defaults(

@@ -52,6 +52,8 @@ class Episode:
     categories: list[str] = field(default_factory=list)
     episode_type: str = "full"
     author: str = ""
+    transcript_url: str = ""
+    transcript_type: str = ""  # MIME type: text/plain, text/html, application/json
 
     def __str__(self) -> str:
         return f"Episode({self.guid}: {self.title})"
@@ -215,6 +217,29 @@ def _parse_episode(item: ET.Element) -> Optional[Episode]:
         if not author:
             author = _get_text(item.find("author"))
 
+        # Extract transcript URL from <podcast:transcript> elements
+        # Prefer types in order: text/html > application/json > text/plain > other
+        transcript_url = ""
+        transcript_type = ""
+        transcript_elements = item.findall("podcast:transcript", NAMESPACES)
+        if transcript_elements:
+            type_priority = {
+                "text/html": 3,
+                "application/json": 2,
+                "text/plain": 1,
+            }
+            best_priority = -1
+            for t_elem in transcript_elements:
+                t_url = t_elem.get("url", "")
+                t_type = t_elem.get("type", "")
+                if not t_url:
+                    continue
+                priority = type_priority.get(t_type, 0)
+                if priority > best_priority:
+                    best_priority = priority
+                    transcript_url = t_url
+                    transcript_type = t_type
+
         return Episode(
             guid=guid,
             title=title,
@@ -229,6 +254,8 @@ def _parse_episode(item: ET.Element) -> Optional[Episode]:
             categories=categories,
             episode_type=episode_type,
             author=author,
+            transcript_url=transcript_url,
+            transcript_type=transcript_type,
         )
 
     except Exception as e:

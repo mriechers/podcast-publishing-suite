@@ -632,6 +632,10 @@ class DovetailClient:
             or ""
         )
 
+        # Extract transcript URL if present in API response
+        transcript_url = data.get("transcriptUrl", "")
+        transcript_type = data.get("transcriptType", "")
+
         return Episode(
             guid=str(guid),
             title=title,
@@ -646,6 +650,8 @@ class DovetailClient:
             categories=categories,
             episode_type=episode_type,
             author=author,
+            transcript_url=transcript_url,
+            transcript_type=transcript_type,
         )
 
 

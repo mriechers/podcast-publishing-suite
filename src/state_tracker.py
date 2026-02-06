@@ -34,6 +34,7 @@ class PublishedEpisode:
     published_at: str
     synced_at: str
     status: str = "published"
+    transcript_synced: bool = False
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -48,6 +49,7 @@ class PublishedEpisode:
             published_at=data.get("published_at", ""),
             synced_at=data.get("synced_at", ""),
             status=data.get("status", "published"),
+            transcript_synced=data.get("transcript_synced", False),
         )
 
 
@@ -348,6 +350,18 @@ class StateTracker:
             return True
 
         return False
+
+    def record_transcript_synced(self, guid: str) -> None:
+        """Mark an episode's transcript as synced to Ghost.
+
+        Args:
+            guid: Episode GUID.
+        """
+        self._ensure_loaded()
+        if guid in self._state:
+            self._state[guid].transcript_synced = True
+            self._save()
+            logger.info(f"Recorded transcript synced for GUID: {guid}")
 
     def reload(self) -> None:
         """Force reload state from disk."""

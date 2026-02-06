@@ -1,4 +1,4 @@
-"""Tests for content builder: sanitization, escaping, JSON-LD, pod.link."""
+"""Tests for content builder: sanitization, escaping, JSON-LD, pod.link, RSS transcripts."""
 
 from __future__ import annotations
 
@@ -12,6 +12,8 @@ from src.content_builder import (
     build_jsonld_metadata,
     build_luminous_ghost_post,
     build_podlink_url,
+    build_transcript_section_html,
+    format_rss_transcript_html,
     format_transcript_html,
     get_apple_id_from_guid,
     sanitize_html,
@@ -148,6 +150,92 @@ class TestPodLink:
         """Should return None when neither apple_id nor feed_url provided."""
         result = build_podlink_url("some-guid")
         assert result is None
+
+
+class TestRSSTranscriptFormatting:
+    """Validate RSS transcript formatting for different content types."""
+
+    def test_html_transcript_sanitized(self):
+        """text/html transcripts should be sanitized through nh3."""
+        raw = '<p>Hello</p><script>alert("xss")</script><p>World</p>'
+        result = format_rss_transcript_html(raw, "text/html")
+        assert "<script>" not in result
+        assert "<p>Hello</p>" in result
+        assert "<p>World</p>" in result
+
+    def test_plain_text_wrapped_in_paragraphs(self):
+        """text/plain without speaker format should wrap paragraphs in <p> tags."""
+        raw = "First paragraph.\n\nSecond paragraph.\n\nThird paragraph."
+        result = format_rss_transcript_html(raw, "text/plain")
+        assert "<p>First paragraph.</p>" in result
+        assert "<p>Second paragraph.</p>" in result
+        assert "<p>Third paragraph.</p>" in result
+
+    def test_plain_text_with_speaker_format(self):
+        """text/plain with '- [Speaker]' format should use existing transcript formatter."""
+        raw = "- [Steve] Hello there.\n- [Anne] Welcome to the show."
+        result = format_rss_transcript_html(raw, "text/plain")
+        assert "<strong>Steve:</strong>" in result
+        assert "<strong>Anne:</strong>" in result
+
+    def test_json_transcript_segments(self):
+        """application/json transcript with segments should produce speaker-attributed HTML."""
+        raw = json.dumps({
+            "segments": [
+                {"speaker": "Steve", "body": "Hello there.", "startTime": 0.0},
+                {"speaker": "Steve", "body": "Welcome to Luminous.", "startTime": 2.5},
+                {"speaker": "Anne", "body": "Thanks Steve.", "startTime": 5.0},
+            ]
+        })
+        result = format_rss_transcript_html(raw, "application/json")
+        # Consecutive Steve segments should be merged
+        assert result.count("<strong>Steve:</strong>") == 1
+        assert "Hello there. Welcome to Luminous." in result
+        assert "<strong>Anne:</strong>" in result
+
+    def test_json_transcript_flat_array(self):
+        """application/json with a bare array of segments should also work."""
+        raw = json.dumps([
+            {"speaker": "Host", "body": "Welcome."},
+            {"speaker": "Guest", "body": "Thank you."},
+        ])
+        result = format_rss_transcript_html(raw, "application/json")
+        assert "<strong>Host:</strong>" in result
+        assert "<strong>Guest:</strong>" in result
+
+    def test_json_transcript_invalid_json_fallback(self):
+        """Invalid JSON should fall back to escaped text."""
+        raw = "this is not json {"
+        result = format_rss_transcript_html(raw, "application/json")
+        assert "<p>" in result
+        assert "this is not json" in result
+
+    def test_empty_content_returns_empty(self):
+        """Empty content should return empty string."""
+        assert format_rss_transcript_html("", "text/plain") == ""
+        assert format_rss_transcript_html("", "text/html") == ""
+        assert format_rss_transcript_html("", "application/json") == ""
+
+    def test_html_entities_escaped_in_plain_text(self):
+        """HTML entities in plain text should be escaped."""
+        raw = "This has <b>bold</b> & \"quotes\""
+        result = format_rss_transcript_html(raw, "text/plain")
+        assert "&lt;b&gt;" in result
+        assert "&amp;" in result
+
+
+class TestTranscriptSectionHTML:
+    """Validate transcript section wrapper."""
+
+    def test_section_has_correct_structure(self):
+        """Transcript section should have Ghost card markers and correct IDs."""
+        result = build_transcript_section_html("<p>Hello</p>")
+        assert '<!--kg-card-begin: html-->' in result
+        assert '<!--kg-card-end: html-->' in result
+        assert 'id="episode-transcript"' in result
+        assert 'class="episode-transcript"' in result
+        assert '<h2>Transcript</h2>' in result
+        assert '<p>Hello</p>' in result
 
 
 @pytest.fixture

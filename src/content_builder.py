@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Optional
 
 import nh3
+import requests
 
 from .feed_parser import Episode
 from .ghost_client import GhostPost
@@ -312,6 +313,162 @@ def extract_slug_from_link(link: str) -> Optional[str]:
 
 
 # =============================================================================
+# RSS Transcript Support
+# =============================================================================
+
+def fetch_rss_transcript(url: str, content_type: str, timeout: int = 30) -> Optional[str]:
+    """Download transcript from a URL provided in RSS <podcast:transcript>.
+
+    Args:
+        url: Transcript URL from the RSS feed.
+        content_type: MIME type (text/plain, text/html, application/json).
+        timeout: Request timeout in seconds.
+
+    Returns:
+        Raw transcript content as string, or None on failure.
+    """
+    try:
+        response = requests.get(
+            url,
+            timeout=timeout,
+            headers={"User-Agent": "PRX-to-Ghost-Publisher/0.1.0"},
+        )
+        response.raise_for_status()
+        return response.text
+    except requests.exceptions.RequestException as e:
+        logger.warning(f"Failed to fetch transcript from {url}: {e}")
+        return None
+
+
+def format_rss_transcript_html(raw_content: str, content_type: str) -> str:
+    """Convert a downloaded RSS transcript into HTML for Ghost posts.
+
+    Handles three Podcasting 2.0 transcript formats:
+    - text/html: sanitize via nh3 and use directly
+    - application/json: parse JSON segments into speaker-attributed paragraphs
+    - text/plain: detect speaker format or wrap paragraphs in <p> tags
+
+    Args:
+        raw_content: Raw transcript content downloaded from URL.
+        content_type: MIME type of the transcript.
+
+    Returns:
+        HTML-formatted transcript string.
+    """
+    if not raw_content:
+        return ""
+
+    if content_type == "text/html":
+        return sanitize_html(raw_content)
+
+    if content_type == "application/json":
+        return _format_json_transcript(raw_content)
+
+    # text/plain or unknown — check for speaker format
+    if "- [" in raw_content:
+        return format_transcript_html(raw_content)
+
+    # Plain text: wrap paragraphs in <p> tags
+    paragraphs = raw_content.strip().split("\n\n")
+    html_parts = []
+    for para in paragraphs:
+        text = para.strip()
+        if text:
+            html_parts.append(f"<p>{html.escape(text)}</p>")
+    return "\n".join(html_parts)
+
+
+def _format_json_transcript(raw_json: str) -> str:
+    """Parse Podcasting 2.0 JSON transcript into HTML.
+
+    JSON format has segments like:
+    {"segments": [{"speaker": "Name", "body": "text", "startTime": 0.0}, ...]}
+    or a flat array of segments.
+
+    Groups consecutive segments from the same speaker into single paragraphs.
+
+    Args:
+        raw_json: Raw JSON transcript string.
+
+    Returns:
+        HTML formatted transcript.
+    """
+    try:
+        data = json.loads(raw_json)
+    except json.JSONDecodeError as e:
+        logger.warning(f"Failed to parse JSON transcript: {e}")
+        return f"<p>{html.escape(raw_json[:500])}</p>"
+
+    # Handle both {"segments": [...]} and bare array
+    if isinstance(data, dict):
+        segments = data.get("segments", [])
+    elif isinstance(data, list):
+        segments = data
+    else:
+        return ""
+
+    if not segments:
+        return ""
+
+    # Group consecutive segments by speaker
+    html_parts = []
+    current_speaker = None
+    current_texts = []
+
+    for seg in segments:
+        speaker = seg.get("speaker", "")
+        body = seg.get("body", "")
+        if not body:
+            continue
+
+        if speaker != current_speaker:
+            # Flush previous speaker's text
+            if current_texts:
+                text = " ".join(current_texts)
+                if current_speaker:
+                    html_parts.append(
+                        f"<p><strong>{html.escape(current_speaker)}:</strong> {html.escape(text)}</p>"
+                    )
+                else:
+                    html_parts.append(f"<p>{html.escape(text)}</p>")
+            current_speaker = speaker
+            current_texts = [body]
+        else:
+            current_texts.append(body)
+
+    # Flush final speaker
+    if current_texts:
+        text = " ".join(current_texts)
+        if current_speaker:
+            html_parts.append(
+                f"<p><strong>{html.escape(current_speaker)}:</strong> {html.escape(text)}</p>"
+            )
+        else:
+            html_parts.append(f"<p>{html.escape(text)}</p>")
+
+    return "\n".join(html_parts)
+
+
+def build_transcript_section_html(transcript_html: str) -> str:
+    """Wrap formatted transcript HTML in the standard Ghost card section.
+
+    Args:
+        transcript_html: Pre-formatted transcript HTML content.
+
+    Returns:
+        Complete Ghost HTML card with transcript section.
+    """
+    return (
+        '<!--kg-card-begin: html-->\n'
+        '<div id="episode-transcript" class="episode-transcript">\n'
+        '<h2>Transcript</h2>\n'
+        f'{transcript_html}\n'
+        '</div>\n'
+        '<!--kg-card-end: html-->'
+    )
+
+
+# =============================================================================
 # JSON-LD Structured Data
 # =============================================================================
 
@@ -393,6 +550,7 @@ def build_luminous_post_html(
     peaks_url: Optional[str] = None,
     ghost_audio_url: Optional[str] = None,
     ghost_image_url: Optional[str] = None,
+    transcript_html: Optional[str] = None,
 ) -> str:
     """Build HTML content for a Luminous episode post.
 
@@ -410,10 +568,12 @@ def build_luminous_post_html(
     Args:
         episode: Parsed Episode object.
         feed_url: URL to the Luminous RSS feed for pod.link generation.
-        transcript: Optional transcript text.
+        transcript: Optional raw transcript text (from local cache).
         peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer.
         ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
         ghost_image_url: Optional Ghost-hosted image URL for artwork.
+        transcript_html: Optional pre-formatted transcript HTML (from RSS).
+            Takes priority over raw transcript text.
 
     Returns:
         Complete HTML for Ghost post body.
@@ -438,16 +598,12 @@ def build_luminous_post_html(
         description = sanitize_html(description)
         sections.append(description)
 
-    # 4. Transcript section (only if real transcript available, not placeholder)
-    # Wrapped in a div with id="episode-transcript" for theme styling
-    if transcript and not is_placeholder_transcript(transcript):
-        transcript_html = format_transcript_html(transcript)
-        sections.append('<!--kg-card-begin: html-->')
-        sections.append('<div id="episode-transcript" class="episode-transcript">')
-        sections.append('<h2>Transcript</h2>')
-        sections.append(transcript_html)
-        sections.append('</div>')
-        sections.append('<!--kg-card-end: html-->')
+    # 4. Transcript section — prefer pre-formatted HTML (from RSS), fall back to raw text (from cache)
+    if transcript_html:
+        sections.append(build_transcript_section_html(transcript_html))
+    elif transcript and not is_placeholder_transcript(transcript):
+        formatted = format_transcript_html(transcript)
+        sections.append(build_transcript_section_html(formatted))
 
     # No footer - theme handles navigation/subscription CTAs
 
@@ -463,6 +619,7 @@ def build_luminous_ghost_post(
     ghost_audio_url: Optional[str] = None,
     ghost_image_url: Optional[str] = None,
     og_image_url: Optional[str] = None,
+    transcript_html: Optional[str] = None,
 ) -> GhostPost:
     """Build a GhostPost for a Luminous episode.
 
@@ -495,6 +652,7 @@ def build_luminous_ghost_post(
     html_content = build_luminous_post_html(
         episode, feed_url, transcript, peaks_url, ghost_audio_url,
         ghost_image_url=ghost_image_url,
+        transcript_html=transcript_html,
     )
 
     # Single show tag only - categories moved to JSON-LD structured data
@@ -592,6 +750,7 @@ def build_post_html(
     peaks_url: Optional[str] = None,
     ghost_audio_url: Optional[str] = None,
     ghost_image_url: Optional[str] = None,
+    transcript_html: Optional[str] = None,
 ) -> str:
     """Build the complete HTML content for a Ghost post.
 
@@ -604,6 +763,7 @@ def build_post_html(
         peaks_url: Optional URL to pre-generated peaks JSON for Wavesurfer.
         ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
         ghost_image_url: Optional Ghost-hosted image URL for artwork.
+        transcript_html: Optional pre-formatted transcript HTML from RSS.
 
     Returns:
         Complete HTML string for the Ghost post body.
@@ -622,6 +782,10 @@ def build_post_html(
         description = strip_boilerplate(episode.description, feed_type)
         description = sanitize_html(description)
         sections.append(description)
+
+    # Transcript section (from RSS <podcast:transcript>)
+    if transcript_html:
+        sections.append(build_transcript_section_html(transcript_html))
 
     return "\n".join(sections)
 
@@ -669,6 +833,7 @@ def build_ghost_post(
     ghost_audio_url: Optional[str] = None,
     ghost_image_url: Optional[str] = None,
     og_image_url: Optional[str] = None,
+    transcript_html: Optional[str] = None,
 ) -> GhostPost:
     """Build a complete GhostPost from an Episode.
 
@@ -694,6 +859,7 @@ def build_ghost_post(
     html_content = build_post_html(
         episode, feed_type=feed_type, peaks_url=peaks_url,
         ghost_audio_url=ghost_audio_url, ghost_image_url=ghost_image_url,
+        transcript_html=transcript_html,
     )
 
     # Build tags (show tag only - categories in JSON-LD)
