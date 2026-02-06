@@ -1,0 +1,3 @@
+[submodule "ghost-mcp"]
+	path = ghost-mcp
+	url = https://github.com/mfydev/ghost-mcp.git
