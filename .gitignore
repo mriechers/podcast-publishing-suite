@@ -34,4 +34,4 @@ venv/
 .DS_Store
 
 # Claude Code
-.claude/
+.claude/settings.local.json
