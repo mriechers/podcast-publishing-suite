@@ -1,0 +1,407 @@
+{
+  "version": "1.0.0",
+  "segments": [
+    {
+      "speaker": "Steve",
+      "startTime": 0.0,
+      "endTime": 124.4,
+      "body": "Hey, it's Steve and this is Luminous, a podcast series about psychedelics from to the best of our knowledge. If you're like me, you've been watching the psychedelic revival charging ahead with a flurry of clinical studies and a whole bunch of new multimillion-dollar research centers. And we're also starting to see a number of books about some of the lesser known pieces of psychedelic history. And there's a fascinating new book by Erik Davis called \"Blotter: The Untold Story of an Acid Medium.\" It's really three books in one. It's about the way LSD tabs were embedded in blotter paper so they wouldn't be detected by the authorities. It's also a deep dive into the psychedelic underground. And finally, it's an art book, gorgeously illustrated, with lots of very trippy blotter art. Now, I have to say, Erik Davis is a really interesting figure in the psychedelic space. He writes a lot about the subcultures of California, which have shaped so much of the larger culture. He's also a longtime psychonaut himself with some serious intellectual chops. So I wanted to talk to him about a few different things, his book on blotter acid, of course, and also some of the bigger questions swirling around psychedelics today. What do we lose when we medicalize these experiences? Can a clinical setting really handle the wildness of these journeys? I also had a very specific question for Erik. Can psychedelics actually reveal another dimension of a reality, not just a hidden part of our unconscious, but some cosmic dimension of existence that goes beyond our individual brains? So onto my interview with Erik Davis, who we first met some years back when he came to Mattis to talk about what he calls high weirdness. Well, Erik, I have to say it is great to talk to you again after all these years."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 124.9,
+      "endTime": 128.5,
+      "body": "I know. I'm really happy to be here, Steve."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 129.0,
+      "endTime": 136.2,
+      "body": "Yeah, so how do you like to be identified, scholar, journalist, cultural critic? What do you call yourself?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 136.7,
+      "endTime": 151.1,
+      "body": "Those all sound good to me. I'll kind of bounce around depending. You know, I like to ride those edges. I mean, I came of age as a journalist and a cultural critic, kind of both."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 151.6,
+      "endTime": 164.0,
+      "body": "And I know you have a PhD in religious studies, in fact, with a particular emphasis on mystical and esoteric traditions, which I think is especially relevant for our conversation here."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 164.5,
+      "endTime": 204.9,
+      "body": "Absolutely, I mean, I did my PhD on psychedelic culture or visionary culture in the 1970s. So some of my main figures were psychedelic users and were wrestling with the meaning of their wild experiences of what I call high weirdness. But I was also interested in tying that into other experiences that weren't necessarily psychedelic, but had a lot of the similar kinds of features. So I'm interested in visionary experience in general in the modern world, and how we wrestle with them as sort of secular post-secular amalgams of all of these different discourses, wrestling with these wild experiences."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 205.4,
+      "endTime": 212.2,
+      "body": "So let's talk about your new book. For the uninitiated, what is, or what was blotter acid?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 212.7,
+      "endTime": 269.5,
+      "body": "Yeah, blotter is what the feds would call a carrier medium. One of the interesting things about LSD in contrast to other drugs is that it's so powerful on such a small level, on a microgram level. Most drugs are powerful on a milligram level. So, like, a hit of MDMA is maybe 130, 150 milligrams, but a strong hit of LSD is 250 micrograms. So kind of an order smaller. And that means that it's very difficult to take the pure amount 'cause it's too small. How do you dose it? So people tended to put it in water, and then they would use that water to dose anything. In the late 1960s, LSD was on everything. People put it on Pez. They put it on pieces of leather. They put it on human hair. They put it on dried mushrooms."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 270.0,
+      "endTime": 272.4,
+      "body": "Wait, human hair? Why would they?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 272.9,
+      "endTime": 283.3,
+      "body": "Just, you know, because you wanna hide the thing. So you put it on hair and it works. You know, it's crazy, but people did it."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 283.8,
+      "endTime": 298.2,
+      "body": "So the point here was to hide the LSD. I mean, as it was getting spread all over the country, all over the world, really. But how do you distribute it without the feds finding it?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 298.7,
+      "endTime": 367.9,
+      "body": "Yeah, and it's to hide it, but it's also just to create a convenient and relatively safe way of distributing it, because you want some control over dosage, even though in those days people tended to take very large doses and often in a fairly, fairly risky way. So blotter paper was one of the things that people put it on, probably back as far as the late 1950s. But by the late 1960s, it became kind of engineered. There was a fellow named Eric Ghost in New York City in the late 1960s, and he was the first one to figure out how to kind of create an engineered way of putting doses on paper. So he had a machine that had a hundred needles that would dip into the sauce, and then move over as one unit, and then impress itself on a little kind of business size card, which would then be sold. And you were expected to then cut it up with scissors, and that would be your dose."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 368.4,
+      "endTime": 377.6,
+      "body": "So you'd have all these sort of paper squares with little bits of LSD in there, and you would literally eat the square."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 378.1,
+      "endTime": 490.9,
+      "body": "You would eat the square, but you had to kind of cut it yourself. And so this was an early blotter. And then in the 1970s when other carrier media were more popular, like pills or gelatins, people gradually started to refine the blotter process. And one of the things they did was they started to perforate it. So rather than having dots that you had to cut, and sometimes the dots would disappear, sometimes they would print a grid on it, like a graph paper. And then those were like the cut along lines where you could cut with your scissors. And then someone said, \"Hey, we could perforate this. We don't have to print the grid.\" And then you could tear the piece, and that would, you know, kind of organize or rationalize the dose. So that was a development that happened in the mid seventies. And also around the same time people started to print images on these pieces of paper. And that's sort of when it starts to become a real, kind of full blown medium because you have all these images on it. As well as being a carrier medium, it's also a print medium. And by the end of the 1970s, this becomes the dominant form of distributing LSD, and it would remain so, and probably still to this day, but by the 1980s, it was widely used and also many, many images came out. So the kind of golden age of blotter is actually after the sort of first bloom of psychedelic culture in the 1960s and early 1970s. It's not really till the 80s and 90s that blotter kind of comes into its own."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 491.4,
+      "endTime": 509.8,
+      "body": "So it's worth pointing out that this period that you're talking about, the 80s and 90s, this is when, you know, psychedelics have gone completely underground. All scientific research was banned at this point. So everything that you're talking about is kind of this underground counterculture."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 510.3,
+      "endTime": 558.7,
+      "body": "Yeah, and even more than just the fact that research was banned was that the sort of visible psychedelic culture was in abeyance as well, you know. And by the late 1970s, you have the rise of punk, and you're moving into the 80s with Reagan and cocaine, and there's sort of a perception that people can have that sort of psychedelics kind of disappear, or they become located only in the Grateful Dead world, which was the kind of the only world that kept the freak flag flying. But actually LSD use never really went away. And a lot of the subcultures in the 1980s and and 90s were still using it, even if they didn't look like hippies necessarily."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 559.2,
+      "endTime": 571.2,
+      "body": "Now, you've lived in the Bay Area for years, and you're kind of a cultural historian of that part of California in particular. Was this especially a Bay Area thing?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 571.7,
+      "endTime": 612.5,
+      "body": "Yes, it actually was. You know, it's always important to emphasize that there were people all over the world who were making LSD and putting it on different carrier medium, including blotter. But even today, a lot of the manufacturer of LSD comes out of the Bay Area or Northern California, probably better said. And most of those sources have remained fairly untouched by legal intervention, let's call it. So it really is, in a lot of ways, a California story, even though eventually other people start making it all over the place. But it remains kind of the pride of place."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 613.0,
+      "endTime": 617.4,
+      "body": "So how did you get so interested in this blotter culture?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 617.9,
+      "endTime": 718.3,
+      "body": "Well, you know, I've been interested in psychedelics and cultural history for a very long time. On the one hand, that led me to a lot of sort of, not really underground, but conferences on psychedelics. And going back to the early 2000s, they were very interdisciplinary gatherings. You'd have botanists, and psychologists, and poets, and complete mystical freaks, and they'd all gather and kind of celebrate and nerd out on these things. And those gatherings led me to meet this fellow Mark McCloud, who had started collecting blotter in the early 1980s. So rather than eating it, he put it in his refrigerator, and he saw it as a medium. He was an artist and an art professor, and he was a freak. And so he just started collecting the stuff. And he had a show of it in San Francisco in 1987. It was a public show that was the first show of kind of blotter art. And he kept collecting. And then he eventually started to make blotter for the underground because he was a printer and was interested in print form, and was very attracted to the whole world and was a big advocate for LSD. And then that not only allowed him to enter into the whole blotter making scene, but he was also able to continue to collect. So Mark was sitting on this huge archive, and his doors were reasonably open. People knew about his archive, which he called the Institute for Illegal Images."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 718.8,
+      "endTime": 721.6,
+      "body": "Which I love, I have to say."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 722.1,
+      "endTime": 793.7,
+      "body": "Yeah, it's a great title. And you know, there were magazine articles about him or newspaper articles about him going back to the 1990s. And, you know, we were really good friends and are really good friends. At one point I was just like, \"Mark, like, well, how come no one's ever done a book?\" And he goes, \"I don't know. Why don't you do it, dog?\" And so I did. And so it was my pandemic project, but there was another reason as well, which we might get to also more later, which is that I really wanted to do a project that focused. For the most part, the story is about the underground as a culture. So I was able to kind of highlight the counter-cultural values that were such an important part, particularly of LSD at a time when all of our contemporary stories about psychedelics are somewhat aggressively trying to reframe these molecules and these experiences according to more mainstream ideas of health, and wellness, and pharmaceuticals, and venture capital, and all this kinda stuff."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 794.2,
+      "endTime": 842.6,
+      "body": "I wanna come back to that, 'cause that's a really fascinating subject. It sort of raises all kinds of questions, but to drill down a little bit more into blotter art, so you have reproduced in your book a number of the blotter art examples in Mark's Institute of Illegal Images. And I have to say they are stunning. Some of it looks very psychedelic, you know, sort of the swirls, and the geometric shapes, and the brilliant colors. Some of it looks a little like comic book art. There's kind of an Andy Warhol vibe to a lot of it, you know, sort of making art out of everyday objects. How would you describe this art, if you can generalize?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 843.1,
+      "endTime": 871.5,
+      "body": "Yeah, it's hard. It's actually hard to generalize. One of the fascinating things about blotter art is that it has such a wide range of imagery associated with it. You have, like you say, abstract designs. Some of them are drawn from modern art, like Bridget Riley kind of patterns. You have very crude hands stamps. People would use offset printing. They'd use silk screening and lots and lots of appropriation."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 872.0,
+      "endTime": 886.8,
+      "body": "The point here is this was not just about sort of distributing little tabs of acid. There was art here. I mean, it was also made to be beautiful, and evocative, and, you know, trippy in itself."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 887.3,
+      "endTime": 1012.5,
+      "body": "Yeah, and I mean, one of the key elements here that's really important to remember is that you don't need images on blotter to distribute the drug. And in fact, some producers, and some consumers, and dealers preferred blank pieces of paper. A lot of the LSD that I first encountered in high school, it was just blank white paper. So you don't need the images. They are essentially superfluous. They function sort of like brands, but also not like brands. And it really is art. It's fun. It's play. It's beauty. It's a kind of gift. And sometimes it was quite sophisticated. The paper itself would come wrapped in origami, or they were embossed on rice paper. So how do we think about all this kind of stuff? And in a way it's interesting to think about. There's no one answer, but in the end, I kind of settled on an analogy. I don't know if I actually put it in the book. I probably should have, but it's like you're giving a gift. So I might be giving you, you know, a beautiful hunting knife. Well, I could put it in, like, a cardboard box, and hand you the box, but that's kinda lame. If I really want to give you a proper gift, I'm gonna make that wrapping really beautiful. Beautiful paper. You know, wrap it up nicely with a ribbon. And, because that's part of the gift. Part of the gift is the wrapping of the gift is the invitation to already be entering into a world of play, and enjoyment, and celebration, and communication between these faceless producers and some kid on the street, saying, \"Hey, yeah, no, we're gonna give you a little extra here, a little gift, a little image to play with.\" And so it really is a kind of space of play and art."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 1013.0,
+      "endTime": 1032.2,
+      "body": "Well, it also seems like, you know, there are a lot of analogies here to the album covers of classic rock albums. You don't need those covers. I mean, just, you're really wanting to listen to the music, but those album covers mattered. I mean, they conveyed something."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 1032.7,
+      "endTime": 1163.5,
+      "body": "Yeah, so I think album covers are a good example, and there are a few album covers that were lifted, and played with in blotter art. Another analogy I think that's maybe even more interesting, that's quite relevant is poster art, the kind of psychedelic rock poster art that emerges in the Haight-Ashbury in the late 1960s, you know, for Bill Graham, and the Family Dog, and Avalon Ballroom, and all these great outfits. They actually function somewhat similarly when you look at them. And part of it was it's the same kind of scene of people using print to make images for the counterculture. But even more, when you look at those posters, one thing that's notable about them is they're not really about the bands. Rick Griffin's famous Flying Eyeball is used to illustrate an upcoming Jimi Hendrix show, but it could have been The Doors, it could have been the Who, it could have been Jefferson's Airplane, because you don't see the band, you see these amazing mixtures of images, and patterns, and colors, and in a way, they're just kind of pointing to a future event. Hey, the show's coming up next week. Wow, look at all the swirly colors. Look at the amazing icons. This is almost like a promise of a future event. You know, we think about media in the counterculture, and, you know, people might think of electric guitar, so electrification, or distortion, or light shows, and there's a lot of sort of, you know, Marshall McLuhan electric media associated with it. But in a lot of ways, the most important media for the counterculture were print. You know, it was offset printing to make underground newspapers, to make underground comics. And in a way, blotter is just an extension of that process, a little bit of underground print media that keeps this sort of counter-cultural ideology alive, you know, in a world swimming with other kinds of media."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 1164.0,
+      "endTime": 1199.2,
+      "body": "You mentioned Marshall McLuhan, the great media theorist of the age. And, you know, his most famous saying is \"The medium is the message.\" And, you take that idea very seriously. I mean, you talk about how the packaging of LSD matters. There's a different experience if you are consuming one of these tabs of blotters, little paper squares, versus, you know, taking a tablet or taking a sugar cube. Even if they have the identical dosage of LSD in them, it's different how you actually consume this."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 1199.7,
+      "endTime": 1303.7,
+      "body": "Absolutely. I mean, one of the most overwhelming and consistent ideas in understanding psychedelic experiences, this idea of set and setting. You hear it over and over again. You hear it today. You heard it in the early 1960s when Timothy Leary popularized it. But even in the 1950s, people who were researching psychedelics recognize that this was true. And what it means is that the experience you're having, it's not a mechanistic process, as with normal pharmaceuticals where there's sort of a, this is gonna do this to the physiology, and that's all. It's regular, it's predictable, but psychedelics are different, and they have different kinds of experiences, and that they depend partly on your set or your mind frame, your attitude, your expectations, and the setting, the environment you're doing them in. You know, is there swirly lights or you're out in nature? Are you in a dungeon? You know, are you in a medical facility? These make a difference. And in a way, the form of the material itself is part of the setting. It makes a difference whether you're, you know, drinking LSD from an elaborate chalice or a grubby little pill, or a piece of paper, or a piece of paper that has a flying saucer on it, or Bart Simpson on it. Those things make a difference. How much of a difference? It's impossible to say. In some ways, maybe not so much, but in a lot of ways they do. They're like spells, or prayers, or, you know, sketches of a possible experience."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 1304.2,
+      "endTime": 1326.6,
+      "body": "So I wanna zoom out from specifically blotter culture and talk more generally about psychedelic culture. If we can get a little personal here, how did you fit into all of this? I mean, I have the impression that you were a pretty experienced psychonaut yourself. Like, how did this shape you, your experiences with psychedelics?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 1327.1,
+      "endTime": 1383.9,
+      "body": "Sure, sure. Well, you know, I came of age in the late 1970s and 1980s, and I took LSD at a kind of shockingly young age growing up in Southern California, kind of being fascinated by the counterculture that had come just before me. And, you know, buying esoteric books, and going to flea markets, and, you know, hanging out with older people who grew up in the 1970s. So I was very interested in LSD and other psychedelics and was really part of a kind of drug culture in the 1980s, which were in some ways my most exuberant times. You know, I saw the Grateful Dead in 1984 and saw them a lot in the 1980s. Almost exclusively, I didn't see them too much in the 1990s. You know, I was very much impressed with that kind of 1980s framework."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 1384.4,
+      "endTime": 1394.4,
+      "body": "Was it the scene that attracted you, I mean, sort of the people you were hanging out with, or was it the visionary experiences themselves?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 1394.9,
+      "endTime": 1507.7,
+      "body": "Oh, it was very much both. Very much both. I mean, I was always interested in the cultural sort of anthropological dimension of all this stuff, including a lot of the spiritual practices, you know, Zen meditation, and the Hari Krishnas, and Muktananda, and all that stuff. For me, the spiritual practices, and the drug practices, and the kind of literary world, you know, a world of esoteric books of Carlos Castaneda, of HP Lovecraft, that stuff was also important to me. So for me, it was always a mixture of like personal exploration, you know, a sort of desire for a kind of enchantment or a kind of other worldliness that is, you know, largely denied by mainstream culture. I was always very attentive to the social forms as well. I mean, I was really happy to be a stoner at that time as well, because cannabis, you know, created different kinds of cultural groups, different people that I became friends with. And even though I was a very good student, and I was already on my kind of Ivy League track, and I ended up going to an Ivy League, I got to hang out with all these miscreants and weird characters just through my interest in the drug scene. And so it was always a very productive space to meet different kinds of people, and sort of participate in different ways in the kind of informal rituals that developed around these drugs, which gave it a sort of, yeah, like a ritual social, even religious character at the same time as which it was, you know, a bunch of kids trying to enliven a suburban existence in Southern California."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 1508.2,
+      "endTime": 1544.6,
+      "body": "So what you're describing is so different than what we tend to hear about psychedelics today. To bring this sort of discussion up to the present here, I mean, now we hear a lot about clinical trials happening in university labs, you know, very carefully controlled environments, you know, with people sitting in rooms with strict protocols, with two guides, talking to people before, during, and after the experience, and specifically with the goal of treating various mental disorders, you know, depression, addiction, PTSD. You're talking about something completely different, right?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 1545.1,
+      "endTime": 1584.3,
+      "body": "Yeah, I am. I mean, you know, underground therapy never went away. You know, people were doing it above board in the early 1960s and a little bit in the early 1970s still at a few places. But the idea that these things could be helpful for individual exploration and wrestling with psychological difficulties was always there. But that was not my experience. That was not the world that I was in. I was in a recreational world is what people would say. And, you know, it's a funny word, recreation, because it has kind of a banal--"
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 1584.8,
+      "endTime": 1586.4,
+      "body": "It sounds frivolous, right?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 1586.9,
+      "endTime": 1715.3,
+      "body": "Frivolous, but if you actually look at the word recreation, you're like, oh, okay, that's actually what we're looking for. We want that sense of novelty, of freshness, of something new. And for me, I think some of the greatest healing functions of psychedelics occur in these more informal collective celebratory contexts. Both, large scale gatherings like the Grateful Dead is a great example where you'd basically have thousands of people coming together and tripping, and enjoying a somewhat ritualistic, but very playful and very embodied, a very danced kind of experience of the visionary domains, but also the kinds of social forms that would happen with smaller groups of friends, where you'd have three, or five, or eight people who were together on the beach or in nature, and just sort of exploring that space together and solo. You know, there's a lot to be said for the healing, you know, functions of psychedelics. And obviously, there's something behind all of these studies, even if they don't necessarily pan out exactly the way we want to. And there's a lot of interesting problems that arise. Are they spiritual or not? Should we look at these as just medicines that produce effects that can be regulated, that can be standardized, so that they can become pharmaceuticals that are sold by pharmaceutical companies, fueled by venture capital? And, you know, if that's what we need to do to create medicines that really work for people, I'm all for it, but there's a lot of renarritizing that happens along the way, a lot of reframing that I feel not only kind of tries to deny some of the beauty and even some of the dangers that we see within the counterculture, but I think it might also sort of cut off some of the real creative, and psychologically, and spiritually profound dimensions of these things, precisely by trying to make it too secular."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 1715.8,
+      "endTime": 1747.4,
+      "body": "Yeah, it sounds like you're saying, for understandable reasons that this effort to medicalize psychedelics, I mean, you know, to shepherd them through the FDA process, to, you know, look out for safety and all of that, I mean, there are very good reasons to go that route, but something profound seems to have been lost by this medicalization effort. I mean, these are sort of almost, by definition, I mean the big experiences, they're kind of wild, right?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 1747.9,
+      "endTime": 1891.1,
+      "body": "Yeah, they're essentially wild. They're not really containable. And so then you get into a sense of like, if we decide as a culture that they're valuable, then what is the framework to manage the risk associated with wildness? And, you know, risk is a very strange thing, how it gets distributed in society. For example, extreme sports are risky. Even skiing is really pretty risky when you look at the numbers. But nobody's like saying, hey, we should really control skiing. You know, we should have, like, a whole regulatory apparatus to determine whether you can, you know, start doing hand gliding, or paragliding, or whatever. But we don't really do that. We're like, \"No, that kind of physical risk is worth it for the value, the pleasure, the athleticism, the sense of intensity, the sense of a rush that comes with that.\" But we don't apply that same idea to drugs, which are still demonized and still feared for legitimate reasons. I'm not saying there isn't risk. It's just about how we decide the value of different kinds of risks. So a lot of what you're seeing now with medicalization is an attempt to organize and control that wildness so that it's safe. And some people who are, you know, very much fans of the kind of controlled guided session where you're in a room with one or two therapists, and you have a eye shade, and you're listening to music, and there's a whole kind of preparatory process, and an integration process, one of the reasons they'll call for this is because it makes bad trips less likely. - Right. - And that they're controlling for that chaos. And to some degree that's probably true. But I think part of what we want out of psychedelics, and not just people who are interested in wild experiences, but people who really want to find the edges of the self, to understand who you are in a deeper way, and to wrestle with some of the really difficult and dark stuff that we all carry within, that some of that risk is actually part of the cure."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 1891.6,
+      "endTime": 1927.2,
+      "body": "My guest is Erik Davis, a cultural critic and the author of \"Blotter: The Untold Story of An Acid Medium.\" You are listening to Luminous, our podcast about the science and culture of psychedelics. There is a big debate about, can you just talk about these experiences in a secular context? I mean, obviously the whole practice of taking psychedelics goes back millennia in indigenous cultures and often with a explicitly spiritual or mystical context. Can you make these just secular experiences, or does that just fundamentally distort them?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 1927.7,
+      "endTime": 1939.3,
+      "body": "Well, it's a fascinating question. You know, people recognize the indigenous roots of many of the psychedelics that people are taking now, but LSD is an interesting different example"
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 1939.8,
+      "endTime": 1947.0,
+      "body": "Right, because that does not come out of indigenous culture. That was synthesized in a lab accidentally, actually."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 1947.5,
+      "endTime": 1997.1,
+      "body": "Absolutely. And so when it gets released, it's almost like there is no framework for what it is. I mean, this is a funny moment to think about. So they discover it by accident. You know, Albert Hofmann at Sandoz in Switzerland, in the interwar period. And then in the postwar era, there you are, your Sandoz, one of your employees has brought you this weird thing. And you're like, \"What do we do with this? We gotta make something out of it. Certainly, somebody wants to buy this.\" So what do we do? We say, \"Oh, well, we'll market it to psychiatrists as a psychotomimetic, as a substance that mimics psychosis. This will help psychiatrists understand what their crazy people are going through."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 1997.6,
+      "endTime": 2000.4,
+      "body": "Right, with schizophrenia or something like that."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 2000.9,
+      "endTime": 2132.9,
+      "body": "Yeah, schizophrenia or something like that. So that becomes a framework. And then at the same time, almost the same time, you have the CIA and a variety of fairly problematic doctors going, \"Hey, maybe we can use this to, like, as a truth serum or as a kind of deconditioning agent. So there are these different frameworks around what LSD is for, and those change over the years. And by the 1960s there's increasingly a spiritual framework around it. You know, so Timothy Leary comes out with this famous book in the early 1960s, \"The Psychedelic Experience.\" And what that book is, is it's explicitly a manual for tripping, but it comes from his literal rewriting of the Tibetan Book of the Dead. This text that is supposed to guide the soul through the afterlife and the various bardos is what they call them, these spaces between lives that we will pass through after death. And he just takes that book and literally rewrites it as a manual for a trip. So people are starting to look at religion and spirituality as another framework to understand it. But at the same time, LSD always has this kind of secular dimension to it, because you could take it as a secular person, albeit usually a bohemian, have an experience of the mind of God or the ultimate nature of the universe or the unity of all things. And come away from that going... There's actually a line with one of the blotter makers, and he said, \"Yeah, it's not about religion. It's about reality.\" So there was a way that LSD always had this kind of a kind of secularism, but a secularism that expanded into these other possibilities of consciousness and even possibilities of the nature of the universe. But it had a different sort of flavor than experiences that are seemed to be more rooted in an indigenous framework, even if it's kind of once or twice removed."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 2133.4,
+      "endTime": 2159.8,
+      "body": "Let me sort of dive into this question of reality, 'cause it seems like a fundamental question about these experiences, you know, how real, or to use a fancy word, how veritical these experiences are. I mean, you know, people talk about experiencing different dimensions of reality, encountering other beings, you know, angels, weird creatures, having conversations with them. What should we make of those reports?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 2160.3,
+      "endTime": 2259.1,
+      "body": "Yeah, that's an interesting question. I tend to fall back on William James here. He's kind of my man when it comes to the problems and possibilities of religious experience. Of course, he wrote this great book, \"The Varieties of Religious Experience,\" and he talks about mysticism in there, but a lot of other kinds of experiences as well. And some of his ideas of mysticism that he developed there wind up being some of the dominant frameworks for therapists and researchers today who are trying to understand the more spiritual or metaphysical possibilities of these drugs. But one of the things that James talks about in that book is that these experiences can be veritical, but at the same time, the rest of us are under no obligation to take them seriously. And that tension, which in a way is contradictory, but in a way is kind of, well, to use James' phrase, pragmatic, is that you acknowledge the possibility that these substances and these experiences can produce insights into the self, into the nature of reality that transform people who are undergoing it. And, you know, they have new visions, they build new worlds, they have different ways of interacting with other people, and with nature, and with, you know, social reality. But at the same time, to then build on top of those experiences, some kind of general, collectively agreed upon establishment of the nature of reality is probably asking a little bit much."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 2259.6,
+      "endTime": 2264.8,
+      "body": "Let me sort of dig into that a little bit more. - Sure."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 2265.3,
+      "endTime": 2310.9,
+      "body": "I mean, there's a huge philosophical question here and scientific question, which is, you know, are these experiences essentially hallucinations? You know, weird is happening with the neural circuits in our brain, and we're creating all this crazy stuff, or, okay, they open up parts of our unconscious that, you know, we don't have access to normally, or do they actually open up some other dimension of reality, some transpersonal dimension of reality that's beyond our individual brain, our individual consciousness? I mean, that seems like a lot rides on that question, how we interpret those, what people make of those. And yet my sense is that's not really talked about very much actually."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 2311.4,
+      "endTime": 2386.2,
+      "body": "No, it's not talked about very much. People don't really want to deal with it 'cause it's such a hairy problem. And I think, I mean, it's going to be very interesting in the next years as these things spread, presumably. You know, they're still mostly illegal. But as it becomes more and more part of our culture and people encounter these extraordinary experiences, and they're not able to contain them, even in the idea of the unconscious or seeing the nature of reality, the way that you would maybe in meditation. Here, the relationship between meditative states and psychedelic states becomes really interesting, and really fraught, and very powerful. And, it's no accident that we're studying these experiences in light of the kinds of studies that are happening around meditation over, again, the last 10, 20, 30 years where people are taking these states seriously as informing us about the nature of reality. I think another thing that's important to raise here is that one of the light motifs of psychedelic experience is synchronicity. People often experience strong synchronicity around and with these kinds of experiences."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 2386.7,
+      "endTime": 2389.1,
+      "body": "You're talking about, like, uncanny coincidences,"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 2389.6,
+      "endTime": 2411.6,
+      "body": "Uncanny coincidences, and uncanny coincidences that build on top of each other in a way that becomes very difficult, even in the light of the morning after, to write off simply as features of the mind or of the individual unconscious that are just organizing an individual's experience because they often have a collective dimension."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 2412.1,
+      "endTime": 2414.9,
+      "body": "Yeah, have you had experiences like that?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 2415.4,
+      "endTime": 2579.4,
+      "body": "Yeah, I would say I've had experiences like that, both around psychedelics and just in life in general. They have a peculiar character, you know, and again, I'm trying to like kinda walk a middle path here. It's almost impossible to write it off as a purely projective phenomenon. It seems like something in reality, in the external world, in the social world has reorganized itself according to a different kind of logic that seems to imply some level of reality, or level of organization, or super story that you're involved in. But at the same time, it still leaves you with this problem that if you start building a worldview based on those things and you keep building it, and building it and building it, that kinda leads you towards, well, it can lead you towards psychosis. You know, if you look at the way that people narrate their own psychotic breaks, they often take the form of synchronicities building on top of one another. So the way I like to think about it is, like, a little synchronicity is a beautiful thing. It's like a little wink of God in your reality, but if they start coming every five minutes, you better, like, buckle your seatbelt. So what to do with that for me, and, you know, this is about me. This is not about what I would say in a philosophical key, but for me it's a mystery, and that religion and spirituality in part is about mystery. How we relate to mystery, the mystery that things exist at all, the mystery that I have a consciousness which the scientists say, I don't really need to have anything happen. I could just be a meat machine doing everything that I'm doing. And yet there's this consciousness, a consciousness that we don't know anything about. And I think that the rise of the interest in psychedelics in a serious research way, and including increasingly a philosophical way, there is now more philosophical discussion about psychedelic experiences, sophisticated religious and spiritual discussions, that they're pointing us towards the fact that consciousness remains a difficult thing to wrap our heads around, and visions of reality or the nature of reality that involve consciousness in a way that's different than mere physicalist materialism become more and more available. But that's also happening just philosophically. There are more and more scientists and physicists who are going, \"Well, there is something to idealism.\""
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 2579.9,
+      "endTime": 2583.1,
+      "body": "Yeah. - There is something to-- - Panpsychism."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 2583.6,
+      "endTime": 2598.4,
+      "body": "Yeah, panpsychism and idealism, those things are all coming up strong. And as I say, in five years, in 10 years when the world gets weirder and it becomes, you know, things are gonna get very strange,"
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 2598.9,
+      "endTime": 2605.7,
+      "body": "Why do you think things are gonna get weirder stranger in the next five to 10 years?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 2606.2,
+      "endTime": 2694.2,
+      "body": "Oh, there's so much there. I think that with the way in which digital reality, virtual worlds is sort of like absorbing more and more of our activity, that's happening And people are getting better and better at, like, how do we shape our experience of reality? I mean, just like a VR set is just an easy example. Oh, I go, I put this thing on. And like, not only does it look kind of like reality, it really looks like reality, except now it's a world where magical things can happen or I can kill things, or I can make love with all sorts of beings. That is going to sort of undermine a sort of common sense, conventional sense of ordinary reality. And in the meantime, the weather's changing, artificial intelligence is like pulling at our very sense of what a mind is and what a what a person is, that all of these things combined with a general sense of panic and a kind of need for deeper questions than secular consumerism provides, will lead to a kind of, I don't wanna say revival, but that there will be a lot of different options for understanding the world that become more easily distributed, argued, and I could be wrong, but that's my gut feeling on it."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 2694.7,
+      "endTime": 2756.3,
+      "body": "Yeah, so I wanna come back to sort of this question of whether there's some sort of transpersonal dimension of reality that psychedelics reveals. And, you know, I appreciate sort of the position that you're taking. You know, you're trying to thread the needle, essentially. You know, it's like, yeah, maybe those other dimensions of reality exist, but, you know, we don't really have proof for that. And you wanna embrace the mystery. I'm wondering if you would be willing to get a little more personal here, like, take one experience that you've had that you just can't explain away, you know, on psychedelics. If there's just something that comes to you that you could describe that it's like, I don't know what to do with this. I was taken off in some other dimension, or it revealed synchronicity in some profound way that just is like, you don't know what to do with."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 2756.8,
+      "endTime": 2802.0,
+      "body": "Oh, let's see. Is there one that I'd be willing to discuss, that I can really hold onto? You know, that's a really interesting question. I guess it would be a sense of encountering non-human intelligences or some kind of sense of having a interpersonal relationship with the medicine itself, or the space that you find yourself in, and one in which it's not appropriate to simply look at the being that you're encountering as some kind of projection of the self because suddenly they're in the room, and you're \"Like, that's not polite. I'm not just gonna say you're just a feature of my mind. I'm gonna have a conversation with you.\""
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 2802.5,
+      "endTime": 2819.7,
+      "body": "And you're talking about like a plant, I mean, you know, because so often, you know, people talk about the plant as teacher or gaining wisdom from the substance literally that you have ingested. Is that the kind of thing you're talking about?"
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 2820.2,
+      "endTime": 2995.4,
+      "body": "Yeah, I'm talking about that or seeing entities that have forms and characteristics and that seem to be interested in engaging in some kind of weird conversation. And the way that I've come to think about it is that the visionary experience, particularly at higher doses and in these more intense places is kind of like an interface that we're building on the fly to communicate with something that's even harder to understand even in these crazy experiences that were happening. So we're kind of trying to grapple with some quality of mind, some quality of nature, some quality of consciousness that is just not graspable in its pure sense. And so the visions are kind of ways of organizing those experiences. So that's why if you have a background with certain gods, those gods might come up. But sometimes it's gods that you don't really know anything about. And people say, \"Yeah, I saw this weird elephant-headed being.\" And someone goes, \"Well, that sounds like Ganesh. Is it like this?\" And they're like, \"Oh my God, yeah, that's the guy. I didn't really know about that.\" Maybe you saw him sometime in your past, but it's not really part of your world. So there is a transpersonal dimension to these kinds of beings that I think necessitate at least a relational, open-hearted attitude in order to see what do they have to say? What can I understand from this experience? How might this change my attitude towards the world? And my experience is that it makes me more open to mystery, open to not knowing, open to the wonder of experience and the wonder of reality and a distrust of the idea that I can know the limits of that world. Oh, it's just matter in a void. Oh, it's just physics. I'm like, I can't really say that anymore. It's just not true to my experience. It has produced this profound change in me that I think opens me up more for connecting with nature, connecting with other people, including other people that are very different than me, to understand why human beings have spent so much of their time on religious and spiritual pursuits, as well as some of the experiences in meditation. I have a 30-year plus meditation practice, and some of the kinds of experiences that I can have in a meditation retreat are not dissimilar from aspects of psychedelic experience that seem to point to some space of mind and maybe some understanding of reality that's just fundamentally different than my ordinary kind of dualistic experience and must be respected as such."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 2995.9,
+      "endTime": 3011.1,
+      "body": "We've covered a lot of ground here, and this has been really fun. So thanks Erik, and thanks for putting out such a beautiful book, \"Blotter,\" which is just kind of extraordinary, I have to say. So thanks."
+    },
+    {
+      "speaker": "Erik",
+      "startTime": 3011.6,
+      "endTime": 3021.2,
+      "body": "Well, I really appreciate it. It was a super blast to do, and it's great stuff to talk about. So thanks very much, Steve."
+    },
+    {
+      "speaker": "Steve",
+      "startTime": 3021.7,
+      "endTime": 3080.5,
+      "body": "That's Erik Davis, who's a cultural critic, scholar of visionary experience, and the author of \"Blotter: The Untold Story of An Acid Medium.\" You're listening to Luminous, our series about psychedelics from To the Best of our Knowledge. You'll find more interviews on the science and philosophy of psychedelics on our website at ttbook.org/luminous. And I hope you're subscribing to the podcast feed where you will meet a lot of fascinating people, including a neuroscientist who's given MDMA to octopuses and a scholar of ancient languages who spent a dozen years investigating the enduring mystery of what really happened at the Temple of Eleusis and how this might have shaped the origins of Christianity. To the best of our knowledge is produced in Madison, Wisconsin. Joe Hartdke is our technical director. Sarah Hopefl did the sound design for this episode. And I'm Steve Paulson. Thanks for listening."
+    },
+    {
+      "speaker": "Announcer",
+      "startTime": 3081.0,
+      "endTime": 3081.4,
+      "body": "PRX."
+    }
+  ]
+}

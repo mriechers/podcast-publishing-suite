@@ -1,33 +1,22 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+> **See [AGENTS.md](./AGENTS.md)** for complete project instructions.
+
+This file provides Claude-specific configuration and notes for working with the PRX-to-Ghost Publisher codebase.
 
 ## Repository Purpose
 
-**Project**: PRX to Ghost Publisher
-**Status**: Bootstrap Phase - Template scaffolding in place, core functionality not yet implemented
+**PRX-to-Ghost Publisher** is an automated publishing system that monitors PRX Dovetail RSS feeds for new podcast episodes and automatically creates posts on Ghost CMS with embedded PRX audio players.
 
-This project aims to build a publishing pipeline that:
-- Fetches content from PRX (Public Radio Exchange) platform
-- Transforms/adapts content for Ghost CMS format
-- Publishes to Ghost via API
-- Manages content lifecycle and updates
-
-**Current State**: This is a fresh instance of a generative AI project template. The repository contains scaffolding for agent-based development and documentation harvesting, but **no PRX or Ghost integration has been implemented yet**.
-
-### What is PRX?
-Public Radio Exchange (prx.org) is a public media distribution platform that enables producers to distribute and monetize their audio content to radio stations and digital platforms.
-
-### What is Ghost?
-Ghost (ghost.org) is a modern open-source headless CMS and publishing platform, commonly used for blogs, newsletters, and content-driven websites with robust API capabilities.
+**See AGENTS.md** for complete architecture documentation, development guidelines, and troubleshooting information.
 
 ## Git Commit Convention
 
-**IMPORTANT**: This project follows workspace-wide commit conventions.
+**IMPORTANT**: This project follows workspace-wide commit conventions with agent attribution.
 
-See: `/Users/mriechers/Developer/workspace_ops/conventions/COMMIT_CONVENTIONS.md`
+**See:** `/Users/mriechers/Developer/the-lodge/conventions/COMMIT_CONVENTIONS.md`
 
-**Quick Reference**: All AI-generated commits must include `[Agent: <name>]` after the subject line.
+**Quick Reference:** All AI-generated commits must include `[Agent: <name>]` after the subject line.
 
 Example:
 ```
@@ -148,16 +137,30 @@ python3.11 scripts/crawl_docs.py --dry-run
 
 # Default run (crawl all sources)
 python3.11 scripts/crawl_docs.py
+feat: Add PRX player embedding to episode transformer
+
+[Agent: Main Assistant]
+
+Implemented PRX audio player embedding using the episode GUID
+to generate the correct embed URL. Updated transformer to include
+player HTML in Ghost post content.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
 ```
 
-The crawler writes outputs to `knowledge/<category>/`:
-- `<slug>.md` - Markdown conversion
-- `<slug>.html` - Raw HTML
-- `<slug>.json` - Metadata (URL, timestamp, status)
+## Key Project Constraints
 
-Source definitions are stored in `knowledge/sources.json`.
+### Python Environment
+- **Required:** Python 3.11+
+- **Virtual Environment Required:** Never install packages to system Python
+- See AGENTS.md for setup instructions
 
-## Repository Architecture
+### Secrets Management
+- **Never commit secrets** - API keys stored in macOS Keychain
+- **See:** `/Users/mriechers/Developer/the-lodge/conventions/SECRETS_MANAGEMENT.md`
+- Required secrets: `GHOST_URL`, `GHOST_ADMIN_KEY`, `RSS2JSON_API_KEY`
 
 ### Current Structure
 
@@ -224,8 +227,21 @@ scripts/                       # Utility scripts
 - **docs/bootstrap.md**: Three-step bootstrap process (create repo, setup Crawl4AI, design agents). Reference when initializing new projects.
 - **scripts/crawl_docs.py**: Async crawler with interactive CLI. Supports filtering by category/slug, dry-run mode, and incremental updates.
 - **knowledge/**: Stores PRX and Ghost API documentation, transformation specs, and other reference materials.
+### Design Documents
+All implementation details are documented in `docs/`:
+- `COMPREHENSIVE_DESIGN.md` - Full system design with multi-feed architecture
+- `AUTOMATION_DESIGN.md` - GitHub Actions workflow and error handling
+- `PRX_FEED_ACCESS_SOLUTIONS.md` - Feed access strategies
+- `GITHUB_ORG_HANDOFF.md` - Client handoff guide
 
-### Knowledge Management
+## Claude-Specific Notes
+
+### Code Generation Guidelines
+1. **Follow design documents** - Implementation details are in `docs/COMPREHENSIVE_DESIGN.md`
+2. **Test with sample data** - Use `sample-data/` for testing before live API calls
+3. **Graceful degradation** - Feed failures should not crash the entire system
+4. **Atomic state writes** - Prevent state corruption with proper file handling
+5. **Agent attribution** - Include agent name in all AI-generated commits
 
 The `knowledge/` directory stores structured documentation:
 - Organized by category (e.g., `knowledge/prx/`, `knowledge/ghost/`)
@@ -240,28 +256,33 @@ The `knowledge/` directory stores structured documentation:
 - `deployment` - Hosting documentation, serverless platform guides
 
 ### Git Hooks
+### Ghost API Integration
+- Use JWT authentication (documented in `docs/COMPREHENSIVE_DESIGN.md`)
+- All posts require: title, content, tags, custom excerpt, featured image
+- Tags: show tag, routing tag (`#show-<name>`), and `Podcast`
+- PRX player embed format documented in `COMPREHENSIVE_DESIGN.md`
 
-The repository uses workspace-wide git hooks from `/Users/mriechers/Developer/workspace_ops/conventions/git-hooks/`.
+### Error Handling Patterns
+- Feed fetching: Try direct access, fallback to RSS2JSON, fallback to Cloudflare bypass
+- State management: Validate JSON before writing, use atomic writes
+- Ghost publishing: Log errors but continue processing other feeds
+- See `docs/AUTOMATION_DESIGN.md` for complete error handling architecture
 
-Configured in `.githooks/commit-msg` - delegates to workspace commit-msg hook for enforcement.
+### Testing Before Implementation
+Always reference:
+1. Sample PRX feed data in `sample-data/`
+2. Cached TTBOOK.org transcripts in `sample-data/ttbook-cache/`
+3. Design specifications in `docs/COMPREHENSIVE_DESIGN.md`
 
-## Crawl4AI Script Details
+## Project Status
 
-The `scripts/crawl_docs.py` script:
-- Requires Python 3.11 shebang (`#!/usr/bin/env python3.11`)
-- Uses `AsyncWebCrawler` from crawl4ai package
-- Supports multiple operational modes via CLI flags
-- Validates source structure (requires `category`, `slug`, `url`)
-- Generates slugs from URLs if not provided
-- Writes three artifacts per source (HTML, Markdown, JSON metadata)
-- Includes timestamp and status tracking in metadata
+**Phase:** Design Complete, Ready for Implementation
 
-### Interactive Prompts
+See `README.md` and `AGENTS.md` for complete development roadmap.
 
-When run with `--init` or `--append`:
-- Prompts for: category, URL, slug (with auto-generated default), notes
-- Leave category blank to finish input loop
-- Sources are immediately saved to `knowledge/sources.json`
+## Git Hooks
+
+This repository uses workspace-wide git hooks from `/Users/mriechers/Developer/the-lodge/conventions/git-hooks/`.
 
 ### Error Handling
 
@@ -383,11 +404,20 @@ Document new project-specific agents in `AGENTS.md` if specialized behavior is n
 ## Templates Usage
 
 The `templates/genai-project/` directory contains the original template scaffold. You can use this to create additional related projects or reference the original template structure.
+Enable hooks:
+```bash
+git config core.hooksPath .githooks
+```
 
-## Documentation Maintenance
+## Quick Reference
+
+**Full Documentation:** See [AGENTS.md](./AGENTS.md)
+
+**Design Specifications:** See `docs/COMPREHENSIVE_DESIGN.md`
 
 - Keep `knowledge/` snapshots current by re-running crawler periodically (monthly recommended)
 - Update `AGENTS.md` when agent topology changes
 - Document any new automation scripts in this file
 - Update README.md with project-specific context once implementation begins
 - Keep architecture docs in `docs/architecture/` synchronized with implementation
+**Workspace Conventions:** `/Users/mriechers/Developer/the-lodge/conventions/`
