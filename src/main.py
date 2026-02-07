@@ -21,12 +21,15 @@ from .content_builder import (
     build_ghost_post,
     build_jsonld_metadata,
     build_luminous_ghost_post,
+    build_tags,
     build_transcript_section_html,
     extract_slug_from_link,
     fetch_rss_transcript,
     format_published_at,
     format_rss_transcript_html,
+    format_transcript_html,
     load_transcript,
+    load_wc_transcript,
 )
 from .waveform_peaks import (
     WaveformError,
@@ -259,18 +262,63 @@ def sync_episodes(
                 transcript_html=rss_transcript_html,
             )
         else:
-            # Fetch RSS transcript if available
+            # Try to load local transcript first (from /transcripts directory)
             ttbook_transcript_html = None
-            if episode.transcript_url:
+            wc_transcript = load_wc_transcript(episode.title)
+            if wc_transcript:
+                logger.info(f"  Found local transcript for: {episode.title}")
+                ttbook_transcript_html = format_transcript_html(wc_transcript)
+
+            # Fall back to RSS transcript if no local transcript found
+            if not ttbook_transcript_html and episode.transcript_url:
                 logger.info(f"  Fetching RSS transcript: {episode.transcript_url}")
                 raw = fetch_rss_transcript(episode.transcript_url, episode.transcript_type)
                 if raw:
                     ttbook_transcript_html = format_rss_transcript_html(raw, episode.transcript_type)
                     logger.info(f"  Formatted RSS transcript ({episode.transcript_type})")
 
+            # Audio upload pipeline for Wonder Cabinet (same as Luminous)
+            wc_peaks_url = None
+            wc_ghost_audio_url = None
+            wc_slug = extract_slug_from_link(episode.link) if episode.link else None
+
+            if upload_audio and episode.enclosure_url and wc_slug and not dry_run:
+                try:
+                    logger.info(f"  Downloading audio + generating peaks for: {wc_slug}")
+                    temp_audio_path, peaks_path = download_and_generate_peaks(
+                        audio_url=episode.enclosure_url,
+                        episode_slug=wc_slug,
+                        peaks_dir=peaks_dir or Path("/tmp/peaks"),
+                        pixels_per_second=20,
+                    )
+                    logger.info(f"  Generated peaks: {peaks_path}")
+
+                    # Upload audio MP3 to Ghost
+                    try:
+                        logger.info(f"  Uploading audio to Ghost...")
+                        wc_ghost_audio_url = client.upload_media(temp_audio_path)
+                        logger.info(f"  Ghost audio URL: {wc_ghost_audio_url}")
+                    except GhostAPIError as e:
+                        logger.warning(f"  Audio upload failed, using PRX URL: {e}")
+
+                    # Upload peaks JSON to Ghost
+                    try:
+                        logger.info(f"  Uploading peaks JSON to Ghost...")
+                        wc_peaks_url = client.upload_file(peaks_path)
+                        logger.info(f"  Ghost peaks URL: {wc_peaks_url}")
+                    except GhostAPIError as e:
+                        logger.warning(f"  Peaks upload failed: {e}")
+
+                except WaveformError as e:
+                    logger.warning(f"  Download/peaks pipeline failed: {e}")
+                except Exception as e:
+                    logger.warning(f"  Unexpected error in upload pipeline: {e}")
+
             ghost_post = build_ghost_post(
                 episode, status=status, primary_tag=primary_tag,
                 ghost_image_url=ghost_image_url, og_image_url=og_image_url,
+                peaks_url=wc_peaks_url,
+                ghost_audio_url=wc_ghost_audio_url,
                 transcript_html=ttbook_transcript_html,
             )
 
@@ -844,8 +892,8 @@ def cmd_update_metadata(args: argparse.Namespace) -> int:
             skipped += 1
             continue
 
-        # Build new metadata
-        new_tags = [{"name": show_tag}]
+        # Build new metadata (show tag public, categories as internal tags)
+        new_tags = build_tags(episode, primary_tag=show_tag)
         jsonld = build_jsonld_metadata(episode, show_name=show_tag)
 
         if dry_run:

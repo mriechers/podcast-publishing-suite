@@ -177,11 +177,13 @@ LUMINOUS_CONFIG = FeedTransformConfig(
 )
 
 # Wonder Cabinet / TTBOOK boilerplate to remove
-# Matches promotional footer paragraphs with wondercabinetproductions.com links
-# e.g., '<p><br>Visit <a href="https://wondercabinetproductions.com">...</a></p>'
-# e.g., '<p>To follow Wonder Cabinet, sign up here: <a href="https://wondercabinetproductions.com/">...</a></p>'
-# e.g., '<p>If you love Wonder Cabinet, sign up ... <a href="https://wondercabinetproductions.com/">...</a></p>'
-WC_PROMO_FOOTER = r'''<p>\s*(?:<br\s*/?>?\s*)?(?:Visit|To follow Wonder Cabinet|If you love Wonder Cabinet)[^<]*<a[^>]*wondercabinetproductions\.com[^>]*>.*?</a>\s*</p>'''
+
+# Promotional footer - matches multiple variants:
+# e.g., '<p>Visit <a href="https://wondercabinetproductions.com">...</a></p>'
+# e.g., '<p>To follow Wonder Cabinet, sign up here: <a href="...">...</a></p>'
+# e.g., '<p>If you love Wonder Cabinet, sign up ... <a href="...">...</a></p>'
+# e.g., '<p>Find out more about the show at <a href="...">...</a>, where you can subscribe...</p>'
+WC_PROMO_FOOTER = r'''<p>\s*(?:<br\s*/?>?\s*)?(?:Visit|To follow Wonder Cabinet|If you love Wonder Cabinet|Find out more about the show at)[^<]*<a[^>]*wondercabinetproductions\.com[^>]*>.*?</a>[^<]*</p>'''
 
 # "keep your subscription active" paragraph
 WC_SUBSCRIPTION_REMINDER = r'''<p>[^<]*keep your subscription active[^<]*</p>'''
@@ -189,26 +191,37 @@ WC_SUBSCRIPTION_REMINDER = r'''<p>[^<]*keep your subscription active[^<]*</p>'''
 # Triple-dash dividers: <p>---</p> (with optional whitespace)
 WC_DASH_DIVIDER = r'''<p>\s*-{3,}\s*</p>'''
 
-# Chapters block: a <p>Chapters:</p> heading followed by timestamped lines
+# Chapters block format 1: a <p>Chapters:</p> heading followed by timestamped lines with <br>
 # Matches: <p>Chapters:</p><p>00:00:00 Title<br>00:04:34 Title<br>...</p>
 WC_CHAPTERS_BLOCK = r'''<p>\s*Chapters:\s*</p>\s*<p>\s*(?:\d{2}:\d{2}:\d{2}\s+[^<]+(?:<br\s*/?>?\s*)?)+\s*</p>'''
 
+# Chapters format 2: Individual <p> tags for each timestamp (no Chapters: heading)
+# Matches consecutive: <p>00:00:00 Title</p><p>00:04:10 Title</p>...
+# Requires at least 2 consecutive timestamp paragraphs to avoid false positives
+WC_TIMESTAMP_PARAGRAPHS = r'''(?:<p>\s*\d{2}:\d{2}:\d{2}\s+[^<]+</p>\s*){2,}'''
+
+# "Hosted by" closing line - remove the standard show credits
+# e.g., '<p><em>Wonder Cabinet</em> is hosted by Anne Strainchamps and Steve Paulson.</p>'
+WC_HOSTED_BY = r'''<p>\s*<em>Wonder Cabinet</em>\s+is hosted by[^<]*</p>'''
+
 
 def _reformat_plain_text_links(content: str) -> str:
-    """Reformat link paragraphs where a plain-text title precedes a raw URL link.
+    """Reformat link elements where a plain-text title precedes a raw URL link.
 
     PRX descriptions often contain links formatted as:
       <p>Title text: <a href="URL"><strong>URL</strong></a></p>
+      <li>Title text: <a href="URL"><strong>URL</strong></a></li>
 
     This transforms them into proper links with the title as the label:
       <p><a href="URL" target="_blank" rel="noopener noreferrer">Title text</a></p>
+      <li><a href="URL" target="_blank" rel="noopener noreferrer">Title text</a></li>
 
     The colon at the end of the title text is stripped.
     """
-    # Match: <p> optional-text : optional-whitespace <a href="URL">...(URL displayed as text)...</a></p>
+    # Match both <p> and <li> elements
     # The title is everything before the last colon that precedes the <a> tag.
     pattern = re.compile(
-        r'<p>\s*'                          # Opening <p>
+        r'<(p|li)>\s*'                     # Opening <p> or <li> (tag name captured)
         r'([^<]+?)'                        # Title text (captured)
         r'[\s\xa0]*'                       # Optional whitespace/nbsp
         r'<a\s+href="([^"]+)"'            # <a href="URL">
@@ -217,23 +230,41 @@ def _reformat_plain_text_links(content: str) -> str:
         r'https?://[^<]*?'                # The displayed URL text
         r'\s*(?:</strong>)?\s*'            # Optional </strong>
         r'</a>'                            # Closing </a>
-        r'\s*</p>',                        # Closing </p>
+        r'(?:\s*\n)?'                      # Optional trailing newline
+        r'\s*</\1>',                       # Closing tag matching opening
         re.IGNORECASE,
     )
 
     def _reformat_match(m: re.Match) -> str:
-        title = m.group(1).strip()
-        url = m.group(2)
+        tag = m.group(1)
+        title = m.group(2).strip()
+        url = m.group(3)
         # Strip trailing colon from title
         title = title.rstrip(':').rstrip()
         if not title:
             return m.group(0)  # No title text, leave unchanged
         return (
-            f'<p><a href="{url}" target="_blank" '
-            f'rel="noopener noreferrer">{title}</a></p>'
+            f'<{tag}><a href="{url}" target="_blank" '
+            f'rel="noopener noreferrer">{title}</a></{tag}>'
         )
 
     return pattern.sub(_reformat_match, content)
+
+
+def _style_link_lists(content: str) -> str:
+    """Add Wonder Cabinet styling class to all bulleted lists.
+
+    Transforms <ul> elements into:
+      <ul class="wc-episode-notes-content-links">...</ul>
+
+    In Wonder Cabinet feeds, bulleted lists are always link lists for episode notes.
+    """
+    return re.sub(
+        r'<ul>',
+        '<ul class="wc-episode-notes-content-links">',
+        content,
+        flags=re.IGNORECASE,
+    )
 
 
 TTBOOK_CONFIG = FeedTransformConfig(
@@ -247,12 +278,26 @@ TTBOOK_CONFIG = FeedTransformConfig(
             marker_id="wc_chapters",
             description="Removes 'Chapters:' block with timestamps"
         ),
+        # Strip individual timestamp paragraphs (alternative format)
+        RemovalRule(
+            name="wc_timestamps",
+            pattern=WC_TIMESTAMP_PARAGRAPHS,
+            marker_id="wc_timestamps",
+            description="Removes consecutive timestamp paragraphs"
+        ),
         # Strip triple-dash dividers
         RemovalRule(
             name="wc_dividers",
             pattern=WC_DASH_DIVIDER,
             marker_id="wc_dividers",
             description="Removes <p>---</p> divider paragraphs"
+        ),
+        # Strip "hosted by" credits line
+        RemovalRule(
+            name="wc_hosted_by",
+            pattern=WC_HOSTED_BY,
+            marker_id="wc_hosted_by",
+            description="Removes 'Wonder Cabinet is hosted by...' line"
         ),
         # Strip promotional footer
         RemovalRule(
@@ -270,6 +315,7 @@ TTBOOK_CONFIG = FeedTransformConfig(
     ],
     custom_transforms=[
         _reformat_plain_text_links,
+        _style_link_lists,
     ],
 )
 

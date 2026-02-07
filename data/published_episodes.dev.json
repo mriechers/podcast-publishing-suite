@@ -160,7 +160,14 @@
     "synced_at": "2026-02-03T21:59:13.364301",
     "status": "draft"
   },
+  "prx_120_1bca3c3e-b5bc-4eae-bfd2-3f12e6e56b04": {
+    "ghost_post_id": "698685ef51fca07a00a17d46",
+    "title": "Carlo Rovelli: Cosmic Mysteries and the Politics of Wonder",
+    "published_at": "2026-02-07T12:00:00.000Z",
+    "synced_at": "2026-02-06T18:23:11.488456",
+    "status": "draft"
+  },
   "_metadata": {
-    "last_sync_time": "2026-01-31T01:05:54.269889"
+    "last_sync_time": "2026-02-06T18:23:06.768519"
   }
 }

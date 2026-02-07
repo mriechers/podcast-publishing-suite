@@ -240,6 +240,42 @@ def load_transcript(slug: str, cache_dir: Optional[Path] = None) -> Optional[str
     return None
 
 
+def load_wc_transcript(episode_title: str, transcript_dir: Optional[Path] = None) -> Optional[str]:
+    """Load Wonder Cabinet transcript from local transcripts directory.
+
+    Looks for transcript files matching the episode title pattern.
+    Files should be named like: 101_Sophie_Strand.txt, 102_Carlo_Rovelli.txt
+
+    Args:
+        episode_title: Episode title to search for (partial match on name).
+        transcript_dir: Path to transcripts directory, defaults to project /transcripts.
+
+    Returns:
+        Transcript text or None if not found.
+    """
+    if transcript_dir is None:
+        transcript_dir = Path(__file__).parent.parent / 'transcripts'
+
+    if not transcript_dir.exists():
+        return None
+
+    # Extract a key name from the title for matching
+    # E.g., "Sophie Strand: Ecological Storytelling..." -> "Sophie Strand"
+    # E.g., "Carlo Rovelli: Cosmic Mysteries..." -> "Carlo Rovelli"
+    title_parts = episode_title.split(':')
+    guest_name = title_parts[0].strip() if title_parts else episode_title
+
+    # Look for transcript files containing the guest name
+    for txt_file in transcript_dir.glob('*.txt'):
+        # Normalize for comparison: replace underscores with spaces
+        file_stem_normalized = txt_file.stem.replace('_', ' ')
+        if guest_name.lower() in file_stem_normalized.lower():
+            logger.info(f"Found transcript: {txt_file.name}")
+            return txt_file.read_text()
+
+    return None
+
+
 # Transcript placeholder text that indicates no actual transcript is available
 TRANSCRIPT_PLACEHOLDER = "Transcripts are typically available for new episodes within 48 hours of their original airdate."
 
@@ -655,8 +691,8 @@ def build_luminous_ghost_post(
         transcript_html=transcript_html,
     )
 
-    # Single show tag only - categories moved to JSON-LD structured data
-    tags = [{'name': 'Luminous'}]
+    # Show tag (public) + episode categories as internal tags
+    tags = build_tags(episode, primary_tag='Luminous')
 
     # Build JSON-LD structured data (preserves categories for SEO)
     jsonld = build_jsonld_metadata(episode, show_name="Luminous")
@@ -790,24 +826,49 @@ def build_post_html(
     return "\n".join(sections)
 
 
+# Tags that remain public (used for Ghost collection routing).
+# All other tags are made internal with a '#' prefix.
+PUBLIC_SHOW_TAGS = {"Wonder Cabinet", "Luminous"}
+
+
 def build_tags(
     episode: Episode,
     primary_tag: str = "TTBOOK",
 ) -> list[dict]:
-    """Build Ghost tags array - show tag only.
+    """Build Ghost tags array with show tag (public) and category tags (internal).
 
-    RSS categories are now stored in JSON-LD structured data via
-    codeinjection_head rather than as Ghost tags. This keeps the
-    Ghost admin UI clean while preserving SEO value.
+    The primary show tag (e.g., 'Wonder Cabinet', 'Luminous') stays public
+    for Ghost collection routing. All other tags derived from RSS categories
+    are prefixed with '#' to make them internal (hidden from public UI but
+    usable for filtering in Ghost Admin).
+
+    RSS categories are also preserved in JSON-LD structured data via
+    codeinjection_head for SEO value.
 
     Args:
-        episode: Parsed Episode object (unused, kept for API compatibility).
-        primary_tag: The show tag to include (e.g., 'TTBOOK', 'Luminous').
+        episode: Parsed Episode object with categories from RSS.
+        primary_tag: The show tag to include (e.g., 'Wonder Cabinet', 'Luminous').
 
     Returns:
-        List with single tag dict in Ghost API format: [{'name': 'Tag'}].
+        List of tag dicts in Ghost API format. Show tag is always first.
     """
-    return [{"name": primary_tag}]
+    tags = [{"name": primary_tag}]
+
+    # Add episode categories as internal tags
+    for category in episode.categories:
+        cat = category.strip()
+        if not cat:
+            continue
+        # Skip if the category duplicates the show tag (case-insensitive)
+        if cat.lower() == primary_tag.lower():
+            continue
+        # All non-show tags become internal with '#' prefix
+        if cat not in PUBLIC_SHOW_TAGS:
+            tags.append({"name": f"#{cat}"})
+        else:
+            tags.append({"name": cat})
+
+    return tags
 
 
 def format_published_at(episode: Episode) -> str:
@@ -849,6 +910,7 @@ def build_ghost_post(
         ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
         ghost_image_url: Optional Ghost-hosted image URL for feature_image and artwork.
         og_image_url: Optional Ghost-hosted OG image URL (1200x630).
+        transcript_html: Optional pre-formatted transcript HTML from RSS.
 
     Returns:
         GhostPost ready for Ghost API.
