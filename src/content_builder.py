@@ -56,6 +56,102 @@ def sanitize_html(raw_html: str) -> str:
     )
 
 
+def format_episode_links(description_html: str) -> str:
+    """Transform episode resource links for proper WC-Episode theme styling.
+
+    PRX episode descriptions contain links in plain <ul> elements. This function:
+    1. Detects <ul> elements containing episode resource links
+    2. Adds class="wc-episode-notes-content-links" for CSS styling
+    3. Adds target="_blank" rel="noopener noreferrer" to links
+    4. Wraps in Ghost HTML card markers to prevent Lexical conversion
+
+    Args:
+        description_html: Sanitized episode description HTML.
+
+    Returns:
+        HTML with properly formatted episode links.
+
+    Example:
+        Input:
+            <ul>
+            <li>Link text: <a href="..."><strong>URL</strong></a></li>
+            </ul>
+
+        Output:
+            <!--kg-card-begin: html-->
+            <ul class="wc-episode-notes-content-links">
+            <li><a href="..." target="_blank" rel="noopener noreferrer">Link text</a></li>
+            </ul>
+            <!--kg-card-end: html-->
+    """
+    import re
+
+    # Pattern to match <ul>...</ul> blocks that contain links
+    ul_pattern = re.compile(
+        r'<ul>\s*((?:<li>.*?</li>\s*)+)</ul>',
+        re.DOTALL | re.IGNORECASE
+    )
+
+    def transform_list(match: re.Match) -> str:
+        """Transform a matched <ul> block."""
+        list_content = match.group(1)
+
+        # Check if this list contains links (skip if it's just plain text list)
+        if '<a href=' not in list_content.lower():
+            return match.group(0)
+
+        # Transform each <li> item
+        li_pattern = re.compile(
+            r'<li>\s*(.*?)\s*</li>',
+            re.DOTALL | re.IGNORECASE
+        )
+
+        def transform_li(li_match: re.Match) -> str:
+            """Transform a single <li> element."""
+            content = li_match.group(1).strip()
+
+            # Extract URL from existing <a> tag
+            href_match = re.search(r'<a\s+href=["\']([^"\']+)["\']', content, re.IGNORECASE)
+            if not href_match:
+                return f'<li>{content}</li>'
+
+            href = href_match.group(1)
+
+            # Extract the descriptive text (everything before the URL display)
+            # Pattern: "Description: <a href>URL</a>" or "<a href>Description</a>"
+            # Remove the <a>...</a> to get surrounding text
+            text_without_link = re.sub(r'<a\s+[^>]*>.*?</a>', '', content, flags=re.DOTALL | re.IGNORECASE)
+            text_without_link = re.sub(r'<strong>|</strong>', '', text_without_link)
+            text_without_link = text_without_link.strip().rstrip(':').strip()
+
+            # If there's descriptive text, use it as the link text
+            # Otherwise extract text from inside the original <a> tag
+            if text_without_link:
+                link_text = text_without_link
+            else:
+                # Extract text from inside <a>...</a>
+                inner_match = re.search(r'<a\s+[^>]*>(.*?)</a>', content, re.DOTALL | re.IGNORECASE)
+                if inner_match:
+                    link_text = re.sub(r'<[^>]+>', '', inner_match.group(1)).strip()
+                else:
+                    link_text = href
+
+            return f'<li><a href="{href}" target="_blank" rel="noopener noreferrer">{link_text}</a></li>'
+
+        transformed_items = li_pattern.sub(transform_li, list_content)
+
+        # Wrap in styled <ul> with Ghost HTML card markers
+        return (
+            '<!--kg-card-begin: html-->\n'
+            '<ul class="wc-episode-notes-content-links">\n'
+            f'{transformed_items}'
+            '</ul>\n'
+            '<!--kg-card-end: html-->'
+        )
+
+    return ul_pattern.sub(transform_list, description_html)
+
+
 # =============================================================================
 # Pod.link Smart Links
 # =============================================================================
@@ -508,7 +604,34 @@ def build_transcript_section_html(transcript_html: str) -> str:
 # JSON-LD Structured Data
 # =============================================================================
 
-def build_jsonld_metadata(episode: "Episode", show_name: str) -> str:
+def strip_html_tags(text: str) -> str:
+    """Remove HTML tags from text, returning plain text.
+
+    Args:
+        text: Text that may contain HTML tags.
+
+    Returns:
+        Plain text with HTML tags removed.
+    """
+    import re
+    if not text:
+        return ""
+    # Remove HTML tags
+    clean = re.sub(r'<[^>]+>', '', text)
+    # Decode common HTML entities
+    clean = html.unescape(clean)
+    # Normalize whitespace
+    clean = ' '.join(clean.split())
+    return clean.strip()
+
+
+def build_jsonld_metadata(
+    episode: "Episode",
+    show_name: str,
+    ghost_url: Optional[str] = None,
+    post_slug: Optional[str] = None,
+    url_prefix: Optional[str] = None,
+) -> str:
     """Generate JSON-LD structured data for SEO.
 
     Stores episode categories and metadata in Schema.org format,
@@ -519,25 +642,47 @@ def build_jsonld_metadata(episode: "Episode", show_name: str) -> str:
 
     Args:
         episode: Parsed Episode object with metadata.
-        show_name: Name of the podcast series (e.g., 'Luminous', 'TTBOOK').
+        show_name: Name of the podcast series (e.g., 'Luminous', 'Wonder Cabinet').
+        ghost_url: Base Ghost site URL (e.g., 'https://wondercabinetproductions.com').
+            When provided with post_slug, generates canonical URL to Ghost post.
+        post_slug: Ghost post slug. Used with ghost_url to build canonical URL.
+        url_prefix: Optional path prefix for the URL (e.g., 'luminous' for
+            Luminous episodes living at /luminous/{slug}/).
 
     Returns:
         HTML script tag containing JSON-LD structured data for injection
         into Ghost's codeinjection_head field.
     """
+    # Use subtitle (short summary) for description, not full HTML content
+    # Strip any HTML tags to ensure clean plain text
+    description = strip_html_tags(episode.subtitle) if episode.subtitle else None
+
+    # Build canonical URL: prefer Ghost site URL over RSS link
+    if ghost_url and post_slug:
+        base = ghost_url.rstrip('/')
+        if url_prefix:
+            canonical_url = f"{base}/{url_prefix.strip('/')}/{post_slug}/"
+        else:
+            canonical_url = f"{base}/{post_slug}/"
+    else:
+        canonical_url = episode.link  # Fallback to RSS link
+
+    # Only include keywords if there are actual categories
+    keywords = episode.categories if episode.categories else None
+
     schema = {
         "@context": "https://schema.org",
         "@type": "PodcastEpisode",
         "name": episode.title,
-        "description": episode.description or episode.subtitle,
+        "description": description,
         "partOfSeries": {
             "@type": "PodcastSeries",
             "name": show_name
         },
-        "keywords": episode.categories,  # RSS categories preserved here
+        "keywords": keywords,
         "datePublished": episode.pub_date.isoformat() if episode.pub_date else None,
         "duration": f"PT{episode.duration}S" if episode.duration and episode.duration.isdigit() else None,
-        "url": episode.link,
+        "url": canonical_url,
     }
 
     # Handle duration in MM:SS or HH:MM:SS format
@@ -632,6 +777,7 @@ def build_luminous_post_html(
     if episode.description:
         description = strip_boilerplate(episode.description, 'luminous')
         description = sanitize_html(description)
+        description = format_episode_links(description)
         sections.append(description)
 
     # 4. Transcript section — prefer pre-formatted HTML (from RSS), fall back to raw text (from cache)
@@ -656,6 +802,8 @@ def build_luminous_ghost_post(
     ghost_image_url: Optional[str] = None,
     og_image_url: Optional[str] = None,
     transcript_html: Optional[str] = None,
+    ghost_url: Optional[str] = None,
+    post_slug: Optional[str] = None,
 ) -> GhostPost:
     """Build a GhostPost for a Luminous episode.
 
@@ -663,7 +811,7 @@ def build_luminous_ghost_post(
     - Title: Episode title with 'Luminous: ' prefix removed
     - custom_excerpt: itunes:subtitle (short summary)
     - feature_image: Episode-specific itunes:image
-    - canonical_url: ttbook.org episode link
+    - canonical_url: Ghost site /luminous/{slug}/ (or ttbook.org fallback)
     - html: Full template with description, player, transcript
 
     Args:
@@ -675,6 +823,8 @@ def build_luminous_ghost_post(
         ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
         ghost_image_url: Optional Ghost-hosted image URL for feature_image and artwork.
         og_image_url: Optional Ghost-hosted OG image URL (1200x630).
+        ghost_url: Base Ghost site URL for canonical URL generation.
+        post_slug: Ghost post slug for canonical URL generation.
 
     Returns:
         GhostPost ready for Ghost API.
@@ -695,7 +845,14 @@ def build_luminous_ghost_post(
     tags = build_tags(episode, primary_tag='Luminous')
 
     # Build JSON-LD structured data (preserves categories for SEO)
-    jsonld = build_jsonld_metadata(episode, show_name="Luminous")
+    # Luminous episodes live at /luminous/{slug}/
+    jsonld = build_jsonld_metadata(
+        episode,
+        show_name="Luminous",
+        ghost_url=ghost_url,
+        post_slug=post_slug,
+        url_prefix="luminous",
+    )
 
     # Format published_at
     published_at = episode.pub_date.strftime('%Y-%m-%dT%H:%M:%S.000Z')
@@ -705,6 +862,12 @@ def build_luminous_ghost_post(
     if excerpt and len(excerpt) > 300:
         excerpt = excerpt[:297] + '...'
 
+    # Build canonical URL: prefer Ghost site URL with /luminous/ prefix
+    if ghost_url and post_slug:
+        canonical_url = f"{ghost_url.rstrip('/')}/luminous/{post_slug}/"
+    else:
+        canonical_url = episode.link  # Fallback to ttbook.org
+
     return GhostPost(
         title=title,
         html=html_content,
@@ -712,7 +875,7 @@ def build_luminous_ghost_post(
         published_at=published_at,
         feature_image=ghost_image_url or episode.image_url,  # Prefer Ghost-hosted
         custom_excerpt=excerpt,  # From itunes:subtitle
-        canonical_url=episode.link,
+        canonical_url=canonical_url,
         tags=tags,
         authors=FEED_AUTHORS.get("luminous", []),
         og_image=og_image_url,
@@ -817,6 +980,7 @@ def build_post_html(
     if episode.description:
         description = strip_boilerplate(episode.description, feed_type)
         description = sanitize_html(description)
+        description = format_episode_links(description)
         sections.append(description)
 
     # Transcript section (from RSS <podcast:transcript>)
@@ -895,6 +1059,9 @@ def build_ghost_post(
     ghost_image_url: Optional[str] = None,
     og_image_url: Optional[str] = None,
     transcript_html: Optional[str] = None,
+    ghost_url: Optional[str] = None,
+    post_slug: Optional[str] = None,
+    url_prefix: Optional[str] = None,
 ) -> GhostPost:
     """Build a complete GhostPost from an Episode.
 
@@ -911,6 +1078,10 @@ def build_ghost_post(
         ghost_image_url: Optional Ghost-hosted image URL for feature_image and artwork.
         og_image_url: Optional Ghost-hosted OG image URL (1200x630).
         transcript_html: Optional pre-formatted transcript HTML from RSS.
+        ghost_url: Base Ghost site URL (e.g., 'https://wondercabinetproductions.com').
+            Used to build canonical URL for JSON-LD schema.
+        post_slug: Ghost post slug. Used with ghost_url to build canonical URL.
+        url_prefix: Optional path prefix for URL (e.g., 'luminous' for /luminous/{slug}/).
 
     Returns:
         GhostPost ready for Ghost API.
@@ -928,7 +1099,14 @@ def build_ghost_post(
     tags = build_tags(episode, primary_tag=primary_tag)
 
     # Build JSON-LD structured data (preserves categories for SEO)
-    jsonld = build_jsonld_metadata(episode, show_name=primary_tag)
+    # Pass ghost_url and post_slug for canonical URL generation
+    jsonld = build_jsonld_metadata(
+        episode,
+        show_name=primary_tag,
+        ghost_url=ghost_url,
+        post_slug=post_slug,
+        url_prefix=url_prefix,
+    )
 
     # Truncate excerpt if too long (Ghost limit is 300 chars)
     excerpt = episode.subtitle
@@ -938,6 +1116,16 @@ def build_ghost_post(
     # Build the post
     authors = FEED_AUTHORS.get(feed_type, [])
 
+    # Build canonical URL: prefer Ghost site URL if available
+    if ghost_url and post_slug:
+        base = ghost_url.rstrip('/')
+        if url_prefix:
+            canonical_url = f"{base}/{url_prefix.strip('/')}/{post_slug}/"
+        else:
+            canonical_url = f"{base}/{post_slug}/"
+    else:
+        canonical_url = episode.link if episode.link else None
+
     post = GhostPost(
         title=episode.title,
         html=html_content,
@@ -945,7 +1133,7 @@ def build_ghost_post(
         published_at=format_published_at(episode),
         feature_image=ghost_image_url or episode.image_url or None,  # Prefer Ghost-hosted
         custom_excerpt=excerpt if excerpt else None,
-        canonical_url=episode.link if episode.link else None,
+        canonical_url=canonical_url,
         tags=tags,
         authors=authors,
         og_image=og_image_url,
