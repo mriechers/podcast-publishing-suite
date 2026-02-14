@@ -27,14 +27,36 @@ class StateLockError(Exception):
 
 @dataclass
 class PublishedEpisode:
-    """Record of a published episode."""
+    """Record of a published episode.
+
+    Tracks the full lifecycle of an episode from import through downstream
+    processing (video generation, social posts, PRX write-back).
+    """
 
     ghost_post_id: str
     title: str
     published_at: str
     synced_at: str
-    status: str = "published"
+    status: str = "draft"  # draft, scheduled, published
+
+    # Audio pipeline
+    audio_uploaded: bool = False
+    audio_ghost_url: str = ""
+    peaks_uploaded: bool = False
+
+    # Transcript pipeline
     transcript_synced: bool = False
+    transcript_source: str = ""  # 'local', 'rss', 'whisper'
+    srt_available: bool = False
+
+    # Downstream workflows
+    video_generated: bool = False
+    youtube_id: str = ""
+    social_queued: bool = False
+    prx_writeback_done: bool = False
+
+    # Ghost post slug for URL construction
+    ghost_slug: str = ""
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
@@ -42,14 +64,32 @@ class PublishedEpisode:
 
     @classmethod
     def from_dict(cls, data: dict) -> "PublishedEpisode":
-        """Create from dictionary."""
+        """Create from dictionary.
+
+        Handles both legacy records (with fewer fields) and new records
+        with the full automation tracking fields.
+        """
         return cls(
             ghost_post_id=data.get("ghost_post_id", ""),
             title=data.get("title", ""),
             published_at=data.get("published_at", ""),
             synced_at=data.get("synced_at", ""),
             status=data.get("status", "published"),
+            # Audio pipeline
+            audio_uploaded=data.get("audio_uploaded", False),
+            audio_ghost_url=data.get("audio_ghost_url", ""),
+            peaks_uploaded=data.get("peaks_uploaded", False),
+            # Transcript pipeline
             transcript_synced=data.get("transcript_synced", False),
+            transcript_source=data.get("transcript_source", ""),
+            srt_available=data.get("srt_available", False),
+            # Downstream workflows
+            video_generated=data.get("video_generated", False),
+            youtube_id=data.get("youtube_id", ""),
+            social_queued=data.get("social_queued", False),
+            prx_writeback_done=data.get("prx_writeback_done", False),
+            # Ghost post slug
+            ghost_slug=data.get("ghost_slug", ""),
         )
 
 
@@ -351,17 +391,156 @@ class StateTracker:
 
         return False
 
-    def record_transcript_synced(self, guid: str) -> None:
+    def record_transcript_synced(
+        self,
+        guid: str,
+        source: str = "",
+        srt_available: bool = False,
+    ) -> None:
         """Mark an episode's transcript as synced to Ghost.
+
+        Args:
+            guid: Episode GUID.
+            source: Transcript source ('local', 'rss', 'whisper').
+            srt_available: True if SRT subtitle file is available.
+        """
+        self._ensure_loaded()
+        if guid in self._state:
+            self._state[guid].transcript_synced = True
+            if source:
+                self._state[guid].transcript_source = source
+            self._state[guid].srt_available = srt_available
+            self._save()
+            logger.info(f"Recorded transcript synced for GUID: {guid} (source={source})")
+
+    def record_audio_uploaded(
+        self,
+        guid: str,
+        audio_ghost_url: str,
+        peaks_uploaded: bool = False,
+    ) -> None:
+        """Record that audio was uploaded to Ghost media library.
+
+        Args:
+            guid: Episode GUID.
+            audio_ghost_url: Ghost media URL for the uploaded audio.
+            peaks_uploaded: True if waveform peaks were also uploaded.
+        """
+        self._ensure_loaded()
+        if guid in self._state:
+            self._state[guid].audio_uploaded = True
+            self._state[guid].audio_ghost_url = audio_ghost_url
+            self._state[guid].peaks_uploaded = peaks_uploaded
+            self._save()
+            logger.info(f"Recorded audio uploaded for GUID: {guid}")
+
+    def record_video_generated(self, guid: str, youtube_id: str = "") -> None:
+        """Record that video was generated and optionally uploaded to YouTube.
+
+        Args:
+            guid: Episode GUID.
+            youtube_id: YouTube video ID if uploaded.
+        """
+        self._ensure_loaded()
+        if guid in self._state:
+            self._state[guid].video_generated = True
+            if youtube_id:
+                self._state[guid].youtube_id = youtube_id
+            self._save()
+            logger.info(f"Recorded video generated for GUID: {guid}")
+
+    def record_social_queued(self, guid: str) -> None:
+        """Record that social posts were queued for approval.
 
         Args:
             guid: Episode GUID.
         """
         self._ensure_loaded()
         if guid in self._state:
-            self._state[guid].transcript_synced = True
+            self._state[guid].social_queued = True
             self._save()
-            logger.info(f"Recorded transcript synced for GUID: {guid}")
+            logger.info(f"Recorded social queued for GUID: {guid}")
+
+    def record_prx_writeback(self, guid: str) -> None:
+        """Record that PRX episode was updated with Ghost URL.
+
+        Args:
+            guid: Episode GUID.
+        """
+        self._ensure_loaded()
+        if guid in self._state:
+            self._state[guid].prx_writeback_done = True
+            self._save()
+            logger.info(f"Recorded PRX writeback for GUID: {guid}")
+
+    def update_status(self, guid: str, status: str) -> None:
+        """Update the publication status of an episode.
+
+        Args:
+            guid: Episode GUID.
+            status: New status ('draft', 'scheduled', 'published').
+        """
+        if status not in ("draft", "scheduled", "published", "failed"):
+            raise ValueError(f"Invalid status: {status}")
+
+        self._ensure_loaded()
+        if guid in self._state:
+            self._state[guid].status = status
+            self._save()
+            logger.info(f"Updated status to '{status}' for GUID: {guid}")
+
+    def update_ghost_slug(self, guid: str, slug: str) -> None:
+        """Update the Ghost post slug for an episode.
+
+        Args:
+            guid: Episode GUID.
+            slug: Ghost post slug.
+        """
+        self._ensure_loaded()
+        if guid in self._state:
+            self._state[guid].ghost_slug = slug
+            self._save()
+            logger.debug(f"Updated ghost_slug to '{slug}' for GUID: {guid}")
+
+    def get_episodes_needing_transcript(self) -> list[tuple[str, "PublishedEpisode"]]:
+        """Get episodes that need transcript sync.
+
+        Returns:
+            List of (guid, episode) tuples for episodes without transcripts.
+        """
+        self._ensure_loaded()
+        return [
+            (guid, ep) for guid, ep in self._state.items()
+            if not ep.transcript_synced and ep.status != "failed"
+        ]
+
+    def get_episodes_pending_writeback(self) -> list[tuple[str, "PublishedEpisode"]]:
+        """Get scheduled/published episodes that need PRX write-back.
+
+        Returns:
+            List of (guid, episode) tuples pending PRX update.
+        """
+        self._ensure_loaded()
+        return [
+            (guid, ep) for guid, ep in self._state.items()
+            if ep.status in ("scheduled", "published")
+            and not ep.prx_writeback_done
+            and ep.ghost_slug  # Must have slug to build URL
+        ]
+
+    def get_episodes_pending_video(self) -> list[tuple[str, "PublishedEpisode"]]:
+        """Get scheduled/published episodes that need video generation.
+
+        Returns:
+            List of (guid, episode) tuples pending video generation.
+        """
+        self._ensure_loaded()
+        return [
+            (guid, ep) for guid, ep in self._state.items()
+            if ep.status in ("scheduled", "published")
+            and not ep.video_generated
+            and ep.srt_available  # Requires SRT for captions
+        ]
 
     def reload(self) -> None:
         """Force reload state from disk."""

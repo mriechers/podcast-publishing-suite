@@ -1,0 +1,151 @@
+# PRX Write-back Workflow
+#
+# Updates the PRX Dovetail episode with the Ghost post URL.
+# This creates a bidirectional link between PRX and Ghost,
+# allowing podcast players to link to the full episode page.
+#
+# Triggered when a post is scheduled in Ghost.
+
+name: Update PRX Episode Link
+
+on:
+  workflow_dispatch:
+    inputs:
+      guid:
+        description: 'Episode GUID'
+        required: true
+        type: string
+      ghost_url:
+        description: 'Ghost post URL'
+        required: true
+        type: string
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  prx-writeback:
+    runs-on: ubuntu-latest
+    outputs:
+      success: ${{ steps.update.outputs.success }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Update PRX episode link
+        id: update
+        env:
+          PRX_CLIENT_ID: ${{ secrets.PRX_CLIENT_ID }}
+          PRX_CLIENT_SECRET: ${{ secrets.PRX_CLIENT_SECRET }}
+          PRX_PODCAST_IDS: ${{ secrets.PRX_PODCAST_IDS }}
+        run: |
+          GUID="${{ inputs.guid }}"
+          GHOST_URL="${{ inputs.ghost_url }}"
+
+          python3 << EOF
+          import sys
+          import os
+          sys.path.insert(0, '.')
+
+          from src.config import get_config
+          from src.prx_auth import PRXAuthClient
+          from src.dovetail_client import DovetailClient, DovetailAPIError
+          from src.state_tracker import StateTracker
+
+          config = get_config(env_name='prod')
+
+          # Extract podcast ID from GUID
+          # GUIDs are formatted as "prx_{podcast_id}_{uuid}"
+          guid = "$GUID"
+          ghost_url = "$GHOST_URL"
+
+          parts = guid.split('_')
+          if len(parts) >= 2:
+              podcast_id = parts[1]
+          else:
+              print(f'Cannot extract podcast ID from GUID: {guid}')
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write('success=false\n')
+              sys.exit(1)
+
+          # Create API client
+          auth_client = PRXAuthClient(
+              client_id=config.prx_client_id,
+              client_secret=config.prx_client_secret,
+              token_endpoint=f'{config.prx_id_base_url}/token',
+          )
+          api_client = DovetailClient(
+              auth_client=auth_client,
+              podcast_id=podcast_id,
+              api_base_url=config.prx_api_base_url,
+          )
+
+          # Update episode link
+          try:
+              success = api_client.set_episode_link(guid, ghost_url, podcast_id)
+
+              if success:
+                  # Record in state tracker
+                  tracker = StateTracker(config.state_file)
+                  tracker.record_prx_writeback(guid)
+
+                  print(f'Successfully updated PRX episode link')
+                  print(f'  GUID: {guid}')
+                  print(f'  Link: {ghost_url}')
+
+                  with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                      f.write('success=true\n')
+              else:
+                  print(f'Episode not found in PRX: {guid}')
+                  with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                      f.write('success=false\n')
+                  sys.exit(1)
+
+          except DovetailAPIError as e:
+              print(f'PRX API error: {e}')
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write('success=false\n')
+              sys.exit(1)
+          EOF
+
+      - name: Commit state file update
+        if: steps.update.outputs.success == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/published_episodes.prod.json
+
+          if git diff --cached --quiet; then
+            echo "No state changes to commit"
+          else
+            git commit -m "chore: Record PRX write-back for ${{ inputs.guid }}
+
+            [Agent: GitHub Actions]
+
+            Updated PRX episode link to: ${{ inputs.ghost_url }}
+
+            Co-Authored-By: GitHub Actions <noreply@github.com>"
+
+            git push
+          fi
+
+      - name: Summary
+        run: |
+          echo "## PRX Write-back" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Episode GUID:** ${{ inputs.guid }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Ghost URL:** ${{ inputs.ghost_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Success:** ${{ steps.update.outputs.success }}" >> $GITHUB_STEP_SUMMARY
