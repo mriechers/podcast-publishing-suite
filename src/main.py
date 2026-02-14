@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+import subprocess
+
 from .config import ConfigError, get_config
 from .content_builder import (
     build_ghost_post,
@@ -25,12 +27,14 @@ from .content_builder import (
     build_tags,
     build_transcript_section_html,
     extract_slug_from_link,
+    slugify_title,
     fetch_rss_transcript,
     format_published_at,
     format_rss_transcript_html,
     format_transcript_html,
     load_transcript,
     load_wc_transcript,
+    process_lexical_visibility,
 )
 from .waveform_peaks import (
     WaveformError,
@@ -38,6 +42,7 @@ from .waveform_peaks import (
     download_and_generate_peaks,
     download_audio_file,
     generate_peaks_for_episode,
+    generate_peaks_json,
     get_peaks_url,
 )
 from .transcript_exporter import export_episode_transcript
@@ -71,6 +76,77 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+def download_media_segments(
+    segments: list[dict],
+    output_path: Path,
+    fallback_url: str = "",
+) -> None:
+    """Download audio from media segments, concatenating with ffmpeg if needed.
+
+    Uses the direct CDN URLs from the Dovetail media[] array, which work
+    for both scheduled and published episodes (unlike the enclosure tracking
+    URL which 404s for scheduled episodes).
+
+    Args:
+        segments: List of media segment dicts with 'href' and 'fileName' keys.
+        output_path: Path to save the final concatenated audio file.
+        fallback_url: Enclosure URL to try if no segments are available.
+
+    Raises:
+        WaveformError: If download or concatenation fails.
+    """
+    if not segments and fallback_url:
+        download_audio_file(fallback_url, output_path)
+        return
+    if not segments:
+        raise WaveformError("No media segments or fallback URL available")
+
+    if len(segments) == 1:
+        # Single segment — download directly
+        download_audio_file(segments[0]["href"], output_path)
+        return
+
+    # Multiple segments — download each, then concatenate with ffmpeg
+    temp_dir = output_path.parent
+    segment_paths = []
+
+    try:
+        for i, seg in enumerate(segments):
+            seg_path = temp_dir / f"segment_{i:03d}.mp3"
+            download_audio_file(seg["href"], seg_path)
+            segment_paths.append(seg_path)
+
+        # Build ffmpeg concat file
+        concat_list = temp_dir / "concat.txt"
+        with open(concat_list, "w") as f:
+            for sp in segment_paths:
+                f.write(f"file '{sp}'\n")
+
+        # Concatenate with ffmpeg
+        logger.info(f"  Concatenating {len(segment_paths)} audio segments with ffmpeg...")
+        result = subprocess.run(
+            ["ffmpeg", "-y", "-f", "concat", "-safe", "0",
+             "-i", str(concat_list), "-c", "copy", str(output_path)],
+            capture_output=True, text=True, timeout=300,
+        )
+        if result.returncode != 0:
+            raise WaveformError(
+                f"ffmpeg concat failed (exit {result.returncode})",
+                result.stderr[-500:] if result.stderr else "",
+            )
+
+        file_size = output_path.stat().st_size
+        logger.info(f"  Concatenated audio: {file_size:,} bytes")
+
+    finally:
+        # Clean up segment files and concat list
+        for sp in segment_paths:
+            sp.unlink(missing_ok=True)
+        concat_list = temp_dir / "concat.txt"
+        if concat_list.exists():
+            concat_list.unlink()
 
 
 @dataclass
@@ -116,6 +192,8 @@ def sync_episodes(
     peaks_dir: Optional[Path] = None,
     ghost_url: str = "",
     upload_audio: bool = False,
+    dovetail_client: Optional[DovetailClient] = None,
+    ghost_site_url: str = "",
 ) -> SyncResult:
     """Sync episodes to Ghost.
 
@@ -131,8 +209,10 @@ def sync_episodes(
         export_transcripts: If True, export transcripts to /transcripts folder.
         generate_peaks: If True, generate waveform peaks JSON files.
         peaks_dir: Directory to save peaks files (required if generate_peaks=True).
-        ghost_url: Ghost site URL for building peaks URLs (required if generate_peaks=True).
+        ghost_url: Ghost admin URL for API operations and building peaks URLs.
         upload_audio: If True, download audio and upload to Ghost media library.
+        dovetail_client: Optional DovetailClient for PRX writeback (sets episode link to Ghost URL).
+        ghost_site_url: Public site URL for PRX writeback canonical links. Defaults to ghost_url.
 
     Returns:
         SyncResult with counts and episode details.
@@ -198,7 +278,7 @@ def sync_episodes(
         # Build the Ghost post based on feed type
         if feed_type == "luminous":
             # Try to load transcript from cache
-            slug = extract_slug_from_link(episode.link)
+            slug = extract_slug_from_link(episode.link, episode.title)
             transcript = load_transcript(slug) if slug else None
             if transcript:
                 logger.info(f"  Found transcript for: {slug}")
@@ -231,17 +311,13 @@ def sync_episodes(
             ghost_audio_url = None
             temp_audio_path = None
 
-            if upload_audio and episode.enclosure_url and slug and not dry_run:
-                # Combined pipeline: download audio → generate peaks → upload both to Ghost
+            if upload_audio and (episode.media_segments or episode.enclosure_url) and slug and not dry_run:
+                # Audio upload pipeline (peaks generation optional)
                 try:
-                    logger.info(f"  Downloading audio + generating peaks for: {slug}")
-                    temp_audio_path, peaks_path = download_and_generate_peaks(
-                        audio_url=episode.enclosure_url,
-                        episode_slug=slug,
-                        peaks_dir=peaks_dir or Path("/tmp/peaks"),
-                        pixels_per_second=20,
-                    )
-                    logger.info(f"  Generated peaks: {peaks_path}")
+                    # Download audio — prefer media segments (direct CDN, works for scheduled episodes)
+                    temp_dir = Path(tempfile.mkdtemp(prefix="ghost_upload_"))
+                    temp_audio_path = temp_dir / f"{slug}.mp3"
+                    download_media_segments(episode.media_segments, temp_audio_path, episode.enclosure_url)
 
                     # Upload audio MP3 to Ghost
                     try:
@@ -251,26 +327,28 @@ def sync_episodes(
                     except GhostAPIError as e:
                         logger.warning(f"  Audio upload failed, using PRX URL: {e}")
 
-                    # Upload peaks JSON to Ghost (uses /files/upload, not /media/upload)
-                    try:
-                        logger.info(f"  Uploading peaks JSON to Ghost...")
-                        peaks_url = client.upload_file(peaks_path)
-                        logger.info(f"  Ghost peaks URL: {peaks_url}")
-                    except GhostAPIError as e:
-                        logger.warning(f"  Peaks upload failed: {e}")
-                        # Fall back to theme assets path if available
-                        if ghost_url:
-                            peaks_url = get_peaks_url(slug, ghost_url)
+                    # Generate and upload peaks if audiowaveform is available
+                    if generate_peaks:
+                        try:
+                            peaks_path = (peaks_dir or Path("/tmp/peaks")) / f"{slug}.json"
+                            peaks_path.parent.mkdir(parents=True, exist_ok=True)
+                            generate_peaks_json(temp_audio_path, peaks_path)
+                            logger.info(f"  Generated peaks: {peaks_path}")
+                            peaks_url = client.upload_file(peaks_path)
+                            logger.info(f"  Ghost peaks URL: {peaks_url}")
+                        except (WaveformError, GhostAPIError) as e:
+                            logger.warning(f"  Peaks generation/upload failed: {e}")
+                            if ghost_url:
+                                peaks_url = get_peaks_url(slug, ghost_url)
 
                 except WaveformError as e:
-                    logger.warning(f"  Download/peaks pipeline failed: {e}")
+                    logger.warning(f"  Audio download failed: {e}")
                 except Exception as e:
                     logger.warning(f"  Unexpected error in upload pipeline: {e}")
                 finally:
-                    # Clean up temp audio file (peaks file stays if uploaded)
+                    # Clean up temp audio file
                     if temp_audio_path and temp_audio_path.exists():
                         temp_audio_path.unlink(missing_ok=True)
-                        # Clean up temp directory too
                         temp_dir = temp_audio_path.parent
                         if temp_dir.exists() and temp_dir.name.startswith("ghost_upload_"):
                             shutil.rmtree(temp_dir, ignore_errors=True)
@@ -325,18 +403,14 @@ def sync_episodes(
             # Audio upload pipeline for Wonder Cabinet (same as Luminous)
             wc_peaks_url = None
             wc_ghost_audio_url = None
-            wc_slug = extract_slug_from_link(episode.link) if episode.link else None
+            wc_slug = extract_slug_from_link(episode.link, episode.title)
 
-            if upload_audio and episode.enclosure_url and wc_slug and not dry_run:
+            if upload_audio and (episode.media_segments or episode.enclosure_url) and wc_slug and not dry_run:
                 try:
-                    logger.info(f"  Downloading audio + generating peaks for: {wc_slug}")
-                    temp_audio_path, peaks_path = download_and_generate_peaks(
-                        audio_url=episode.enclosure_url,
-                        episode_slug=wc_slug,
-                        peaks_dir=peaks_dir or Path("/tmp/peaks"),
-                        pixels_per_second=20,
-                    )
-                    logger.info(f"  Generated peaks: {peaks_path}")
+                    # Download audio — prefer media segments (direct CDN, works for scheduled episodes)
+                    temp_dir = Path(tempfile.mkdtemp(prefix="ghost_upload_"))
+                    temp_audio_path = temp_dir / f"{wc_slug}.mp3"
+                    download_media_segments(episode.media_segments, temp_audio_path, episode.enclosure_url)
 
                     # Upload audio MP3 to Ghost
                     try:
@@ -346,18 +420,28 @@ def sync_episodes(
                     except GhostAPIError as e:
                         logger.warning(f"  Audio upload failed, using PRX URL: {e}")
 
-                    # Upload peaks JSON to Ghost
-                    try:
-                        logger.info(f"  Uploading peaks JSON to Ghost...")
-                        wc_peaks_url = client.upload_file(peaks_path)
-                        logger.info(f"  Ghost peaks URL: {wc_peaks_url}")
-                    except GhostAPIError as e:
-                        logger.warning(f"  Peaks upload failed: {e}")
+                    # Generate and upload peaks if audiowaveform is available
+                    if generate_peaks:
+                        try:
+                            peaks_path = (peaks_dir or Path("/tmp/peaks")) / f"{wc_slug}.json"
+                            peaks_path.parent.mkdir(parents=True, exist_ok=True)
+                            generate_peaks_json(temp_audio_path, peaks_path)
+                            logger.info(f"  Generated peaks: {peaks_path}")
+                            wc_peaks_url = client.upload_file(peaks_path)
+                            logger.info(f"  Ghost peaks URL: {wc_peaks_url}")
+                        except (WaveformError, GhostAPIError) as e:
+                            logger.warning(f"  Peaks generation/upload failed: {e}")
 
                 except WaveformError as e:
-                    logger.warning(f"  Download/peaks pipeline failed: {e}")
+                    logger.warning(f"  Audio download failed: {e}")
                 except Exception as e:
                     logger.warning(f"  Unexpected error in upload pipeline: {e}")
+                finally:
+                    if temp_audio_path and temp_audio_path.exists():
+                        temp_audio_path.unlink(missing_ok=True)
+                        temp_dir = temp_audio_path.parent
+                        if temp_dir.exists() and temp_dir.name.startswith("ghost_upload_"):
+                            shutil.rmtree(temp_dir, ignore_errors=True)
 
             ghost_post = build_ghost_post(
                 episode, status=status, primary_tag=primary_tag,
@@ -381,6 +465,41 @@ def sync_episodes(
             post_result = client.create_post(ghost_post)
             ghost_post_id = post_result.get("id", "")
             ghost_slug = post_result.get("slug", "")
+
+            # Lexical post-processing: apply visibility controls
+            # (audio player = web-only, email CTA = email-only, transcript = web-only)
+            if ghost_post_id:
+                try:
+                    lexical_post = client.get_post_with_lexical(ghost_post_id)
+                    lexical_str = lexical_post.get("lexical")
+                    if lexical_str:
+                        modified_lexical = process_lexical_visibility(lexical_str)
+                        client.update_post_lexical(
+                            ghost_post_id, modified_lexical,
+                            lexical_post.get("updated_at"),
+                        )
+                        logger.info(f"  Applied Lexical visibility controls")
+                except Exception as e:
+                    logger.warning(f"  Lexical visibility post-processing failed: {e}")
+
+            # PRX writeback: set episode url to public Ghost canonical URL
+            site_url = ghost_site_url or ghost_url
+            if dovetail_client and ghost_slug and site_url:
+                try:
+                    url_prefix = "luminous" if feed_type == "luminous" else None
+                    base = site_url.rstrip("/")
+                    if url_prefix:
+                        canonical = f"{base}/{url_prefix}/{ghost_slug}/"
+                    else:
+                        canonical = f"{base}/{ghost_slug}/"
+                    success = dovetail_client.set_episode_link(episode.guid, canonical)
+                    if success:
+                        tracker.record_prx_writeback(episode.guid)
+                        logger.info(f"  PRX writeback: {canonical}")
+                    else:
+                        logger.warning(f"  PRX writeback: episode not found for GUID {episode.guid}")
+                except Exception as e:
+                    logger.warning(f"  PRX writeback failed: {e}")
 
             # Record the publish
             tracker.record_publish(
@@ -519,6 +638,7 @@ def _run_sync(
         Exit code (see EXIT_* constants).
     """
     # Fetch and parse episodes
+    api_client = None  # Set when using Dovetail API (enables PRX writeback)
     try:
         if args.file:
             logger.info(f"Parsing local file: {args.file}")
@@ -618,7 +738,7 @@ def _run_sync(
     # Sync episodes
     export_transcripts = args.export_transcripts
     generate_peaks = args.generate_peaks
-    upload_audio = args.upload_audio
+    upload_audio = not getattr(args, 'no_upload_audio', False)
 
     # --upload-audio implies --generate-peaks (audio download is needed for both)
     if upload_audio:
@@ -626,12 +746,9 @@ def _run_sync(
 
     # Check audiowaveform if peaks generation requested
     if generate_peaks and not check_audiowaveform_installed():
-        logger.error("audiowaveform not installed. Install with: brew install audiowaveform")
-        logger.error("Peaks generation disabled.")
+        logger.warning("audiowaveform not installed. Install with: brew install audiowaveform")
+        logger.warning("Peaks generation disabled (audio upload will still proceed).")
         generate_peaks = False
-        if upload_audio:
-            logger.error("Audio upload requires peaks generation. Upload disabled.")
-            upload_audio = False
 
     # Set peaks directory (temp dir for upload mode, theme assets for generate-only mode)
     peaks_dir = None
@@ -660,6 +777,8 @@ def _run_sync(
         peaks_dir=peaks_dir,
         ghost_url=config.ghost_url,
         upload_audio=upload_audio,
+        dovetail_client=api_client,
+        ghost_site_url=config.ghost_site_url,
     )
 
     elapsed = round(time.monotonic() - sync_start, 1)
@@ -956,7 +1075,7 @@ def cmd_update_metadata(args: argparse.Namespace) -> int:
             continue
 
         # Extract slug from episode link for canonical URL generation
-        post_slug = extract_slug_from_link(episode.link) if episode.link else None
+        post_slug = extract_slug_from_link(episode.link, episode.title)
 
         # Determine URL prefix based on feed type
         # Luminous episodes live at /luminous/{slug}/, Wonder Cabinet at /{slug}/
@@ -1263,9 +1382,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="Directory to save peaks JSON files (e.g., /path/to/theme/assets/peaks)",
     )
     sync_parser.add_argument(
-        "--upload-audio",
+        "--no-upload-audio",
         action="store_true",
-        help="Download audio and upload to Ghost media library (solves CORS issues, implies --generate-peaks)",
+        help="Skip downloading audio and uploading to Ghost media library (use PRX tracking URLs instead)",
     )
     sync_parser.add_argument(
         "--json-output",
@@ -1363,7 +1482,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         export_transcripts=False,
         generate_peaks=False,
         peaks_dir=None,
-        upload_audio=False,
+        no_upload_audio=False,
         json_output=False,
         yes=False,
     )

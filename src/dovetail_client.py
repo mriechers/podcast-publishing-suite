@@ -487,13 +487,13 @@ class DovetailClient:
     ) -> dict[str, Any]:
         """Update an episode via the Dovetail API.
 
-        This is used for PRX write-back to set the episode's link field
+        This is used for PRX write-back to set the episode's url field
         to point to the Ghost post URL.
 
         Args:
-            episode_id: The numeric episode ID (from PRX, not the GUID).
+            episode_id: The episode UUID (from PRX).
             updates: Dictionary of fields to update. Common fields:
-                - link: URL to the episode's web page (Ghost post URL)
+                - url: URL to the episode's web page (Ghost post URL)
                 - description: Episode description
                 - title: Episode title
 
@@ -504,7 +504,7 @@ class DovetailClient:
             DovetailAPIError: If the update request fails.
 
         Example:
-            >>> client.update_episode("12345", {"link": "https://wondercabinet.com/episode-slug/"})
+            >>> client.update_episode("51f01251-...", {"url": "https://wondercabinet.com/episode-slug/"})
         """
         endpoint = f"/authorization/episodes/{episode_id}"
         response = self._make_request("PUT", endpoint, json_data=updates)
@@ -552,10 +552,11 @@ class DovetailClient:
         link_url: str,
         podcast_id: Optional[str] = None,
     ) -> bool:
-        """Set the episode's link field to the Ghost post URL.
+        """Set the episode's url field to the Ghost post URL.
 
         Convenience method for PRX write-back that handles the GUID-to-ID
-        lookup and makes the update request.
+        lookup and updates the episode's ``url`` field (the "Episode website
+        link" shown in podcast apps and PRX directory listings).
 
         Args:
             guid: Episode GUID.
@@ -573,8 +574,8 @@ class DovetailClient:
             logger.warning(f"Episode not found for GUID: {guid}")
             return False
 
-        self.update_episode(episode_id, {"link": link_url})
-        logger.info(f"Set link for {guid} to: {link_url}")
+        self.update_episode(episode_id, {"url": link_url})
+        logger.info(f"Set url for {guid} to: {link_url}")
         return True
 
     def _parse_api_episode(self, data: dict[str, Any]) -> Episode:
@@ -686,21 +687,42 @@ class DovetailClient:
             else:
                 duration = f"{minutes:02d}:{seconds:02d}"
 
-        # Extract image URL
-        # Try episode-level fields first, then fall back to podcastImage
-        # (the show-level artwork attached to each episode in the API response)
-        image_url = (
-            data.get("imageUrl")
-            or data.get("image")
-            or data.get("itunes:image")
-            or ""
-        )
-        if isinstance(image_url, dict):
-            image_url = image_url.get("href", "")
+        # Extract image URL, alt text, and caption
+        # Try episode-level `image` first (dict with href, altText, caption, credit),
+        # then fall back to podcastImage (show-level artwork).
+        image_url = ""
+        image_alt = ""
+        image_caption = ""
+
+        episode_image = data.get("image")
+        if isinstance(episode_image, dict):
+            image_url = episode_image.get("href", "")
+            image_alt = episode_image.get("altText", "")
+            caption = episode_image.get("caption", "")
+            credit = episode_image.get("credit", "")
+            if caption and credit:
+                image_caption = f"{caption} | {credit}"
+            else:
+                image_caption = caption or credit
+
+        if not image_url:
+            image_url = data.get("imageUrl") or data.get("itunes:image") or ""
+            if isinstance(image_url, dict):
+                image_url = image_url.get("href", "")
+
         if not image_url:
             podcast_image = data.get("podcastImage")
             if isinstance(podcast_image, dict):
                 image_url = podcast_image.get("href", "")
+                if not image_alt:
+                    image_alt = podcast_image.get("altText", "")
+                if not image_caption:
+                    caption = podcast_image.get("caption", "")
+                    credit = podcast_image.get("credit", "")
+                    if caption and credit:
+                        image_caption = f"{caption} | {credit}"
+                    else:
+                        image_caption = caption or credit
 
         # Extract categories
         categories = []
@@ -733,6 +755,21 @@ class DovetailClient:
         transcript_url = data.get("transcriptUrl", "")
         transcript_type = data.get("transcriptType", "")
 
+        # Extract media segments (direct CDN URLs from Dovetail)
+        # These bypass the Podtrac/Dovetail tracking chain and work
+        # for both scheduled and published episodes.
+        media_segments = []
+        raw_media = data.get("media", [])
+        if isinstance(raw_media, list):
+            for seg in raw_media:
+                if isinstance(seg, dict) and seg.get("href") and seg.get("status") == "complete":
+                    media_segments.append({
+                        "href": seg["href"],
+                        "fileName": seg.get("fileName", ""),
+                        "duration": seg.get("duration", "0"),
+                        "size": seg.get("size", 0),
+                    })
+
         return Episode(
             guid=str(guid),
             title=title,
@@ -749,6 +786,9 @@ class DovetailClient:
             author=author,
             transcript_url=transcript_url,
             transcript_type=transcript_type,
+            media_segments=media_segments,
+            image_alt=image_alt,
+            image_caption=image_caption,
         )
 
 

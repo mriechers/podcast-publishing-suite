@@ -26,6 +26,7 @@ class Config:
     ghost_url: str
     ghost_admin_api_key: str
     prx_feed_url: str
+    ghost_site_url: str = ""  # Public site URL (e.g., wondercabinetproductions.com); defaults to ghost_url
     ghost_api_version: str = "v5.0"
     publish_status: str = "draft"
     dry_run: bool = False
@@ -55,6 +56,10 @@ class Config:
         # If prx_podcast_ids has values but prx_podcast_id is empty, use first
         if self.prx_podcast_ids and not self.prx_podcast_id:
             self.prx_podcast_id = self.prx_podcast_ids[0]
+
+        # Default ghost_site_url to ghost_url if not set
+        if not self.ghost_site_url:
+            self.ghost_site_url = self.ghost_url
 
         # Validate required fields
         if not self.ghost_url:
@@ -171,6 +176,7 @@ def get_config(reload: bool = False, env_name: str = "dev") -> Config:
 
     _config = Config(
         ghost_url=os.getenv("GHOST_URL", ghost_config.get("url", "")),
+        ghost_site_url=os.getenv("GHOST_SITE_URL", ghost_config.get("site_url", "")),
         ghost_admin_api_key=os.getenv("GHOST_ADMIN_API_KEY", ""),
         prx_feed_url=os.getenv("PRX_FEED_URL", json_config.get("feed_url", "")),
         ghost_api_version=ghost_config.get("api_version", "v5.0"),

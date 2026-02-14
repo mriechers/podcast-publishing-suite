@@ -188,8 +188,8 @@ WC_PROMO_FOOTER = r'''<p>\s*(?:<br\s*/?>?\s*)?(?:Visit|To follow Wonder Cabinet|
 # "keep your subscription active" paragraph
 WC_SUBSCRIPTION_REMINDER = r'''<p>[^<]*keep your subscription active[^<]*</p>'''
 
-# Triple-dash dividers: <p>---</p> (with optional whitespace)
-WC_DASH_DIVIDER = r'''<p>\s*-{3,}\s*</p>'''
+# Dash dividers: <p>--</p> or <p>---</p> (with optional whitespace)
+WC_DASH_DIVIDER = r'''<p>\s*-{2,}\s*</p>'''
 
 # Chapters block format 1: a <p>Chapters:</p> heading followed by timestamped lines with <br>
 # Matches: <p>Chapters:</p><p>00:00:00 Title<br>00:04:34 Title<br>...</p>
@@ -285,12 +285,12 @@ TTBOOK_CONFIG = FeedTransformConfig(
             marker_id="wc_timestamps",
             description="Removes consecutive timestamp paragraphs"
         ),
-        # Strip triple-dash dividers
+        # Strip dash dividers (-- or ---)
         RemovalRule(
             name="wc_dividers",
             pattern=WC_DASH_DIVIDER,
             marker_id="wc_dividers",
-            description="Removes <p>---</p> divider paragraphs"
+            description="Removes <p>--</p> and <p>---</p> divider paragraphs"
         ),
         # Strip "hosted by" credits line
         RemovalRule(

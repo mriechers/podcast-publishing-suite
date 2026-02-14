@@ -5,7 +5,17 @@
     "published_at": "2026-01-24T12:00:00.000Z",
     "synced_at": "2026-01-29T23:55:59.703250",
     "status": "draft",
-    "transcript_synced": false
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": true,
+    "ghost_slug": "introducing-wonder-cabinet"
   },
   "prx_120_d3c666b2-79bd-42a4-8344-f46bcec7940c": {
     "ghost_post_id": "697c482100bb330001068783",
@@ -13,7 +23,17 @@
     "published_at": "2025-11-05T12:00:00.000Z",
     "synced_at": "2026-01-29T23:56:49.018638",
     "status": "draft",
-    "transcript_synced": false
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": false,
+    "ghost_slug": ""
   },
   "prx_120_1aafe930-8e1b-4135-9f44-c712df82f570": {
     "ghost_post_id": "697db99300bb33000106882a",
@@ -21,17 +41,55 @@
     "published_at": "2026-01-31T07:00:00.000Z",
     "synced_at": "2026-01-31T02:13:07.328329",
     "status": "draft",
-    "transcript_synced": false
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": true,
+    "ghost_slug": ""
   },
   "prx_120_1bca3c3e-b5bc-4eae-bfd2-3f12e6e56b04": {
-    "ghost_post_id": "69869aa3aa8b2100016a9c3a",
+    "ghost_post_id": "6986911eaa8b2100016a9c28",
     "title": "Carlo Rovelli: Cosmic Mysteries and the Politics of Wonder",
     "published_at": "2026-02-07T12:00:00.000Z",
-    "synced_at": "2026-02-06T19:51:31.588188",
+    "synced_at": "2026-02-06T19:10:54.512062",
     "status": "draft",
-    "transcript_synced": false
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": true,
+    "ghost_slug": ""
+  },
+  "prx_120_51f01251-1815-485d-ace9-dd68aadae833": {
+    "ghost_post_id": "6990234ae3e894000119a2ea",
+    "title": "Rebecca Solnit: Hope After the End",
+    "published_at": "2026-02-14T12:00:00.000Z",
+    "synced_at": "2026-02-14T01:24:59.315783",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": true,
+    "ghost_slug": "rebecca-solnit-hope-after-the-end"
   },
   "_metadata": {
-    "last_sync_time": "2026-02-06T19:51:23.694344"
+    "last_sync_time": "2026-02-14T01:24:33.194057"
   }
 }

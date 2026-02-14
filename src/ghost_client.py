@@ -50,6 +50,8 @@ class GhostPost:
     og_image: Optional[str] = None
     twitter_image: Optional[str] = None
     codeinjection_head: Optional[str] = None
+    feature_image_alt: Optional[str] = None
+    feature_image_caption: Optional[str] = None
 
     def to_api_dict(self) -> dict[str, Any]:
         """Convert to Ghost API format."""
@@ -77,6 +79,10 @@ class GhostPost:
             data["twitter_image"] = self.twitter_image
         if self.codeinjection_head:
             data["codeinjection_head"] = self.codeinjection_head
+        if self.feature_image_alt:
+            data["feature_image_alt"] = self.feature_image_alt
+        if self.feature_image_caption:
+            data["feature_image_caption"] = self.feature_image_caption
 
         return data
 
@@ -381,6 +387,77 @@ class GhostClient:
         payload = {"posts": [post_data]}
 
         logger.info(f"Updating post: {post_id}")
+        logger.debug(f"PUT {url}")
+
+        response = self._request_with_retry(
+            "PUT", url, json=payload, headers=self._get_headers(), timeout=30,
+        )
+
+        result = self._handle_response(response)
+
+        posts = result.get("posts", [])
+        if not posts:
+            raise GhostAPIError("No post returned in response")
+
+        return posts[0]
+
+    def get_post_with_lexical(self, post_id: str) -> dict:
+        """Get a post by ID, including Lexical JSON content.
+
+        Args:
+            post_id: Ghost post ID.
+
+        Returns:
+            Post data with both 'html' and 'lexical' fields populated.
+
+        Raises:
+            GhostAPIError: If request fails.
+        """
+        url = f"{self.api_url}/posts/{post_id}/?formats=html,lexical"
+
+        logger.debug(f"GET {url}")
+
+        response = self._request_with_retry(
+            "GET", url, headers=self._get_headers(), timeout=30,
+        )
+
+        result = self._handle_response(response)
+
+        posts = result.get("posts", [])
+        if not posts:
+            raise GhostAPIError(f"Post not found: {post_id}")
+
+        return posts[0]
+
+    def update_post_lexical(self, post_id: str, lexical: str, updated_at: str) -> dict:
+        """Update a post using raw Lexical JSON (bypasses HTML conversion).
+
+        Unlike update_post() which uses source=html, this sends the Lexical JSON
+        directly without any source parameter, preserving exact Lexical structure
+        including visibility controls on individual nodes.
+
+        Args:
+            post_id: Ghost post ID.
+            lexical: Lexical JSON string.
+            updated_at: Current updated_at timestamp from the post.
+
+        Returns:
+            Updated post data from API response.
+
+        Raises:
+            GhostAPIError: If update fails.
+        """
+        # No source= parameter — Ghost accepts lexical field directly
+        url = f"{self.api_url}/posts/{post_id}/"
+
+        post_data = {
+            "lexical": lexical,
+            "updated_at": updated_at,
+        }
+
+        payload = {"posts": [post_data]}
+
+        logger.info(f"Updating post Lexical: {post_id}")
         logger.debug(f"PUT {url}")
 
         response = self._request_with_retry(

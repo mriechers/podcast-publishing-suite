@@ -6,6 +6,7 @@ import base64
 import html
 import json
 import logging
+import re
 import urllib.parse
 from datetime import datetime
 from pathlib import Path
@@ -84,20 +85,61 @@ def format_episode_links(description_html: str) -> str:
             </ul>
             <!--kg-card-end: html-->
     """
-    import re
-
     # Pattern to match <ul>...</ul> blocks that contain links
     ul_pattern = re.compile(
         r'<ul>\s*((?:<li>.*?</li>\s*)+)</ul>',
         re.DOTALL | re.IGNORECASE
     )
 
+    # Pattern for detecting bare URLs (no <a> wrapper)
+    bare_url_pattern = re.compile(r'https?://[^\s<>"]+')
+
+    # Patterns for smart link text splitting (quoted titles, curly quotes)
+    quoted_pattern = re.compile(r'["\u201c](.+?)["\u201d]')
+
+    def _split_link_text(text: str) -> tuple[str, str, str]:
+        """Split descriptive text into (prefix, link_label, suffix).
+
+        Instead of hyperlinking the entire text, identifies the most
+        meaningful short portion to link:
+        - Quoted titles: 'Pre-order "The Book" on sale' → ('Pre-order ', '"The Book"', ' on sale')
+        - Colon-separated names: 'Program Name: long description' → ('', 'Program Name', ': long description')
+        - Short text (≤ 60 chars): link everything
+
+        Returns:
+            Tuple of (prefix_text, link_label, suffix_text).
+        """
+        if len(text) <= 60:
+            return ('', text, '')
+
+        # Quoted text: link just the quoted portion (handles book titles, etc.)
+        qm = quoted_pattern.search(text)
+        if qm:
+            return (text[:qm.start()], text[qm.start():qm.end()], text[qm.end():])
+
+        # Colon separator: link the name/title before the colon
+        colon_idx = text.find(':')
+        if 0 < colon_idx <= 50:
+            return ('', text[:colon_idx], text[colon_idx:])
+
+        # Fallback: link everything
+        return ('', text, '')
+
+    def _format_smart_li(href: str, text: str) -> str:
+        """Format a <li> with smart link text splitting."""
+        prefix, label, suffix = _split_link_text(text)
+        link = f'<a href="{href}" target="_blank" rel="noopener noreferrer">{label}</a>'
+        return f'<li>{prefix}{link}{suffix}</li>'
+
     def transform_list(match: re.Match) -> str:
         """Transform a matched <ul> block."""
         list_content = match.group(1)
 
-        # Check if this list contains links (skip if it's just plain text list)
-        if '<a href=' not in list_content.lower():
+        # Check if this list contains links (either <a> tags or bare URLs)
+        has_link_tags = '<a href=' in list_content.lower()
+        has_bare_urls = bool(bare_url_pattern.search(list_content))
+
+        if not has_link_tags and not has_bare_urls:
             return match.group(0)
 
         # Transform each <li> item
@@ -112,31 +154,35 @@ def format_episode_links(description_html: str) -> str:
 
             # Extract URL from existing <a> tag
             href_match = re.search(r'<a\s+href=["\']([^"\']+)["\']', content, re.IGNORECASE)
-            if not href_match:
-                return f'<li>{content}</li>'
+            if href_match:
+                href = href_match.group(1)
 
-            href = href_match.group(1)
+                # Extract the descriptive text (everything before the URL display)
+                text_without_link = re.sub(r'<a\s+[^>]*>.*?</a>', '', content, flags=re.DOTALL | re.IGNORECASE)
+                text_without_link = re.sub(r'<strong>|</strong>', '', text_without_link)
+                text_without_link = text_without_link.strip().rstrip(':').strip()
 
-            # Extract the descriptive text (everything before the URL display)
-            # Pattern: "Description: <a href>URL</a>" or "<a href>Description</a>"
-            # Remove the <a>...</a> to get surrounding text
-            text_without_link = re.sub(r'<a\s+[^>]*>.*?</a>', '', content, flags=re.DOTALL | re.IGNORECASE)
-            text_without_link = re.sub(r'<strong>|</strong>', '', text_without_link)
-            text_without_link = text_without_link.strip().rstrip(':').strip()
-
-            # If there's descriptive text, use it as the link text
-            # Otherwise extract text from inside the original <a> tag
-            if text_without_link:
-                link_text = text_without_link
-            else:
-                # Extract text from inside <a>...</a>
-                inner_match = re.search(r'<a\s+[^>]*>(.*?)</a>', content, re.DOTALL | re.IGNORECASE)
-                if inner_match:
-                    link_text = re.sub(r'<[^>]+>', '', inner_match.group(1)).strip()
+                if text_without_link:
+                    link_text = text_without_link
                 else:
-                    link_text = href
+                    inner_match = re.search(r'<a\s+[^>]*>(.*?)</a>', content, re.DOTALL | re.IGNORECASE)
+                    if inner_match:
+                        link_text = re.sub(r'<[^>]+>', '', inner_match.group(1)).strip()
+                    else:
+                        link_text = href
 
-            return f'<li><a href="{href}" target="_blank" rel="noopener noreferrer">{link_text}</a></li>'
+                return _format_smart_li(href, link_text)
+
+            # No <a> tag — check for bare URLs
+            url_match = bare_url_pattern.search(content)
+            if url_match:
+                url = url_match.group(0)
+                # Use text before the URL as link text (strip trailing colon/whitespace)
+                text_before = content[:url_match.start()].strip().rstrip(':').strip()
+                link_text = text_before if text_before else url
+                return _format_smart_li(url, link_text)
+
+            return f'<li>{content}</li>'
 
         transformed_items = li_pattern.sub(transform_li, list_content)
 
@@ -242,6 +288,93 @@ def build_listen_links_html(guid: str, feed_url: str = None) -> str:
   </a>
 </div>
 <!--kg-card-end: html-->'''
+
+
+# =============================================================================
+# Email CTA (for email subscribers who can't see the web audio player)
+# =============================================================================
+
+def build_email_cta_html(post_url: str) -> str:
+    """Build an email-only CTA block for newsletter subscribers.
+
+    Email subscribers can't see the web audio player, so this provides
+    a styled "Listen to this episode" link that takes them to the web post.
+    Matches the style used in the manually-polished Rovelli post.
+
+    Args:
+        post_url: Full URL to the Ghost post.
+
+    Returns:
+        HTML string with Ghost card markers (visibility applied via Lexical post-processing).
+    """
+    safe_url = html.escape(post_url, quote=True)
+    return (
+        '<!--kg-card-begin: html-->\n'
+        '<div class="wc-email-cta" style="text-align: center; margin: 24px 0;">'
+        f'<a href="{safe_url}" '
+        'style="display: inline-block; padding: 12px 24px; background-color: #10a544; '
+        'color: #ffffff; text-decoration: none; border-radius: 4px; font-weight: 600;">'
+        'Listen to this episode</a></div>\n'
+        '<!--kg-card-end: html-->'
+    )
+
+
+# =============================================================================
+# Lexical Visibility Controls
+# =============================================================================
+
+# Ghost Lexical visibility: web-only (hidden from email newsletters)
+VISIBILITY_WEB_ONLY = {
+    "web": {"nonMember": True, "memberSegment": "status:free,status:-free"},
+    "email": {"memberSegment": ""},
+}
+
+# Ghost Lexical visibility: email-only (hidden from web)
+VISIBILITY_EMAIL_ONLY = {
+    "web": {"nonMember": False, "memberSegment": ""},
+    "email": {"memberSegment": "status:free,status:-free"},
+}
+
+# Content markers used to identify nodes during Lexical post-processing
+_LEXICAL_WEB_ONLY_MARKERS = ["wc-audio-player", "episode-transcript"]
+_LEXICAL_EMAIL_ONLY_MARKERS = ["wc-email-cta"]
+
+
+def process_lexical_visibility(lexical_str: str) -> str:
+    """Apply visibility controls to Lexical JSON nodes.
+
+    Walks the Lexical root children and sets visibility based on content markers:
+    - Audio player (wc-audio-player): web-only
+    - Email CTA (wc-email-cta): email-only
+    - Transcript (episode-transcript): web-only
+
+    Args:
+        lexical_str: Raw Lexical JSON string from Ghost.
+
+    Returns:
+        Modified Lexical JSON string with visibility applied.
+    """
+    lexical = json.loads(lexical_str)
+    children = lexical.get("root", {}).get("children", [])
+
+    for child in children:
+        child_html = child.get("html", "")
+        if not child_html:
+            continue
+
+        # Check for web-only markers
+        for marker in _LEXICAL_WEB_ONLY_MARKERS:
+            if marker in child_html:
+                child["visibility"] = VISIBILITY_WEB_ONLY
+                break
+        else:
+            # Check for email-only markers
+            for marker in _LEXICAL_EMAIL_ONLY_MARKERS:
+                if marker in child_html:
+                    child["visibility"] = VISIBILITY_EMAIL_ONLY
+                    break
+
+    return json.dumps(lexical)
 
 
 # =============================================================================
@@ -425,22 +558,59 @@ def format_transcript_html(transcript: str) -> str:
     return '\n'.join(html_lines)
 
 
-def extract_slug_from_link(link: str) -> Optional[str]:
-    """Extract episode slug from TTBOOK link.
+def slugify_title(title: str) -> str:
+    """Generate a URL-safe slug from an episode title.
+
+    Mirrors Ghost's default slug generation: lowercase, hyphens for spaces,
+    strip non-alphanumeric characters, collapse multiple hyphens.
 
     Args:
-        link: Episode URL (e.g., 'https://www.ttbook.org/show/luminous-melissa-etheridge-ayahuasca')
+        title: Episode title string.
+
+    Returns:
+        URL-safe slug (e.g., 'rebecca-solnit-hope-after-the-end').
+    """
+    slug = title.lower().strip()
+    # Remove common prefixes that Ghost would also strip
+    slug = re.sub(r'^(wonder cabinet|luminous):\s*', '', slug)
+    # Replace non-alphanumeric characters with hyphens
+    slug = re.sub(r'[^a-z0-9]+', '-', slug)
+    # Collapse multiple hyphens and strip leading/trailing
+    slug = re.sub(r'-+', '-', slug).strip('-')
+    return slug
+
+
+# Generic path segments that indicate the link has no episode-specific slug
+_GENERIC_SLUGS = {"listen", "episode", "episodes", "show", "podcast", "player", "embed"}
+
+
+def extract_slug_from_link(link: str, title: str = "") -> Optional[str]:
+    """Extract episode slug from episode link, with title fallback.
+
+    For RSS-sourced episodes, the link typically contains a slug-friendly path
+    (e.g., ttbook.org/show/episode-name). For API-sourced episodes, the link
+    may be a generic player URL (e.g., play.prx.org/listen) — in that case,
+    falls back to generating a slug from the episode title.
+
+    Args:
+        link: Episode URL.
+        title: Episode title (used as fallback for slug generation).
 
     Returns:
         Slug string or None.
     """
-    if not link:
-        return None
-    # Extract the last path component
-    path = urllib.parse.urlparse(link).path
-    parts = path.strip('/').split('/')
-    if parts:
-        return parts[-1]
+    if link:
+        path = urllib.parse.urlparse(link).path
+        parts = path.strip('/').split('/')
+        if parts:
+            candidate = parts[-1]
+            # Only use the link-derived slug if it looks episode-specific
+            if candidate and candidate not in _GENERIC_SLUGS:
+                return candidate
+
+    # Fallback: generate slug from title
+    if title:
+        return slugify_title(title)
     return None
 
 
@@ -613,7 +783,6 @@ def strip_html_tags(text: str) -> str:
     Returns:
         Plain text with HTML tags removed.
     """
-    import re
     if not text:
         return ""
     # Remove HTML tags
@@ -732,14 +901,16 @@ def build_luminous_post_html(
     ghost_audio_url: Optional[str] = None,
     ghost_image_url: Optional[str] = None,
     transcript_html: Optional[str] = None,
+    ghost_url: Optional[str] = None,
+    post_slug: Optional[str] = None,
 ) -> str:
     """Build HTML content for a Luminous episode post.
 
     Template structure:
-    1. HTML5 audio player (theme-stylable)
-    2. Pod.link "Listen on your favorite app" button
+    1. HTML5 audio player (theme-stylable, web-only via Lexical visibility)
+    2. Email CTA link (email-only via Lexical visibility)
     3. Episode description (from content:encoded, boilerplate stripped)
-    4. Transcript section (only if transcript exists)
+    4. Transcript section (web-only via Lexical visibility)
 
     Removed elements (per client feedback):
     - Original Air Date metadata line
@@ -755,6 +926,8 @@ def build_luminous_post_html(
         ghost_image_url: Optional Ghost-hosted image URL for artwork.
         transcript_html: Optional pre-formatted transcript HTML (from RSS).
             Takes priority over raw transcript text.
+        ghost_url: Ghost site URL for building email CTA link.
+        post_slug: Post slug for building email CTA link.
 
     Returns:
         Complete HTML for Ghost post body.
@@ -768,10 +941,10 @@ def build_luminous_post_html(
             ghost_image_url=ghost_image_url,
         ))
 
-    # Listen links removed per editorial decision — pod.link buttons
-    # were not wanted in the imported Luminous content.
-    # if episode.guid and feed_url:
-    #     sections.append(build_listen_links_html(episode.guid, feed_url))
+    # 2. Email CTA — "Listen to this episode" link for email subscribers
+    if ghost_url and post_slug:
+        cta_url = f"{ghost_url.rstrip('/')}/luminous/{post_slug}/"
+        sections.append(build_email_cta_html(cta_url))
 
     # 3. Episode description (from content:encoded, with boilerplate stripped and sanitized)
     if episode.description:
@@ -839,6 +1012,7 @@ def build_luminous_ghost_post(
         episode, feed_url, transcript, peaks_url, ghost_audio_url,
         ghost_image_url=ghost_image_url,
         transcript_html=transcript_html,
+        ghost_url=ghost_url, post_slug=post_slug,
     )
 
     # Show tag (public) + episode categories as internal tags
@@ -853,9 +1027,6 @@ def build_luminous_ghost_post(
         post_slug=post_slug,
         url_prefix="luminous",
     )
-
-    # Format published_at
-    published_at = episode.pub_date.strftime('%Y-%m-%dT%H:%M:%S.000Z')
 
     # Use subtitle as custom_excerpt (Ghost limit is 300 chars)
     excerpt = episode.subtitle
@@ -872,7 +1043,7 @@ def build_luminous_ghost_post(
         title=title,
         html=html_content,
         status=status,
-        published_at=published_at,
+        published_at=None,  # Let Ghost use import time (PRX dates can be in the future)
         feature_image=ghost_image_url or episode.image_url,  # Prefer Ghost-hosted
         custom_excerpt=excerpt,  # From itunes:subtitle
         canonical_url=canonical_url,
@@ -881,6 +1052,8 @@ def build_luminous_ghost_post(
         og_image=og_image_url,
         twitter_image=og_image_url,
         codeinjection_head=jsonld,
+        feature_image_alt=episode.image_alt or None,
+        feature_image_caption=episode.image_caption or None,
     )
 
 
@@ -950,6 +1123,9 @@ def build_post_html(
     ghost_audio_url: Optional[str] = None,
     ghost_image_url: Optional[str] = None,
     transcript_html: Optional[str] = None,
+    ghost_url: Optional[str] = None,
+    post_slug: Optional[str] = None,
+    url_prefix: Optional[str] = None,
 ) -> str:
     """Build the complete HTML content for a Ghost post.
 
@@ -963,6 +1139,9 @@ def build_post_html(
         ghost_audio_url: Optional Ghost-hosted audio URL (avoids CORS).
         ghost_image_url: Optional Ghost-hosted image URL for artwork.
         transcript_html: Optional pre-formatted transcript HTML from RSS.
+        ghost_url: Ghost site URL for building email CTA link.
+        post_slug: Post slug for building email CTA link.
+        url_prefix: Optional path prefix (e.g., 'luminous').
 
     Returns:
         Complete HTML string for the Ghost post body.
@@ -975,6 +1154,15 @@ def build_post_html(
             episode, peaks_url=peaks_url, ghost_audio_url=ghost_audio_url,
             ghost_image_url=ghost_image_url,
         ))
+
+    # Email CTA — "Listen to this episode" link for email subscribers
+    if ghost_url and post_slug:
+        base = ghost_url.rstrip('/')
+        if url_prefix:
+            cta_url = f"{base}/{url_prefix.strip('/')}/{post_slug}/"
+        else:
+            cta_url = f"{base}/{post_slug}/"
+        sections.append(build_email_cta_html(cta_url))
 
     # Episode description with boilerplate stripped and sanitized
     if episode.description:
@@ -1093,6 +1281,7 @@ def build_ghost_post(
         episode, feed_type=feed_type, peaks_url=peaks_url,
         ghost_audio_url=ghost_audio_url, ghost_image_url=ghost_image_url,
         transcript_html=transcript_html,
+        ghost_url=ghost_url, post_slug=post_slug, url_prefix=url_prefix,
     )
 
     # Build tags (show tag only - categories in JSON-LD)
@@ -1130,7 +1319,7 @@ def build_ghost_post(
         title=episode.title,
         html=html_content,
         status=status,
-        published_at=format_published_at(episode),
+        published_at=None,  # Let Ghost use import time (PRX dates can be in the future)
         feature_image=ghost_image_url or episode.image_url or None,  # Prefer Ghost-hosted
         custom_excerpt=excerpt if excerpt else None,
         canonical_url=canonical_url,
@@ -1139,6 +1328,8 @@ def build_ghost_post(
         og_image=og_image_url,
         twitter_image=og_image_url,
         codeinjection_head=jsonld,
+        feature_image_alt=episode.image_alt or None,
+        feature_image_caption=episode.image_caption or None,
     )
 
     logger.debug(f"Built post with {len(tags)} tags, status={status}")

@@ -91,6 +91,7 @@ echo "  Environment: ${ENV}"
 echo "  Source: Dovetail API"
 echo "  Podcasts: 3329 (Luminous), 120 (Wonder Cabinet)"
 echo "  Status: draft"
+echo "  Audio: Upload to Ghost (default)"
 if [ -n "$DRY_RUN" ]; then
     echo -e "  Mode: ${YELLOW}DRY RUN${NC} (no posts will be created)"
 else

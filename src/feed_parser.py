@@ -54,6 +54,9 @@ class Episode:
     author: str = ""
     transcript_url: str = ""
     transcript_type: str = ""  # MIME type: text/plain, text/html, application/json
+    media_segments: list[dict] = field(default_factory=list)  # Direct CDN URLs from Dovetail media[] array
+    image_alt: str = ""  # Alt text for episode artwork
+    image_caption: str = ""  # Caption/credit for episode artwork
 
     def __str__(self) -> str:
         return f"Episode({self.guid}: {self.title})"
