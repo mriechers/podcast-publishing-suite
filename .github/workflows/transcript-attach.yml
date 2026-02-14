@@ -1,0 +1,292 @@
+# Transcript Attachment Workflow
+#
+# Attaches transcripts to Ghost posts from multiple sources:
+# - Local /transcripts/ directory
+# - S3 bucket (from Whisper submodule)
+# - RSS feed <podcast:transcript> tags
+#
+# Two modes:
+# - pre-publish: Attach transcript to draft before producer review
+# - post-publish: Update already-published Ghost post with transcript
+
+name: Attach Transcript to Episode
+
+on:
+  workflow_dispatch:
+    inputs:
+      guid:
+        description: 'Episode GUID'
+        required: true
+        type: string
+      ghost_post_id:
+        description: 'Ghost post ID'
+        required: true
+        type: string
+      ghost_slug:
+        description: 'Ghost post slug'
+        required: true
+        type: string
+      mode:
+        description: 'Attachment mode'
+        required: false
+        type: choice
+        options:
+          - pre-publish
+          - post-publish
+        default: pre-publish
+      source_override:
+        description: 'Force transcript source (local, s3, rss)'
+        required: false
+        type: string
+
+  # Called by Whisper submodule when transcription completes
+  repository_dispatch:
+    types: [transcript-ready]
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  attach-transcript:
+    runs-on: ubuntu-latest
+    outputs:
+      transcript_attached: ${{ steps.attach.outputs.attached }}
+      transcript_source: ${{ steps.attach.outputs.source }}
+      srt_available: ${{ steps.attach.outputs.srt_available }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install boto3  # For S3 access
+
+      - name: Extract inputs from dispatch event
+        id: extract-inputs
+        run: |
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            # From Whisper submodule callback
+            echo "guid=${{ github.event.client_payload.guid }}" >> $GITHUB_OUTPUT
+            echo "ghost_post_id=${{ github.event.client_payload.ghost_post_id }}" >> $GITHUB_OUTPUT
+            echo "ghost_slug=${{ github.event.client_payload.ghost_slug }}" >> $GITHUB_OUTPUT
+            echo "s3_html_path=${{ github.event.client_payload.html_path }}" >> $GITHUB_OUTPUT
+            echo "s3_srt_path=${{ github.event.client_payload.srt_path }}" >> $GITHUB_OUTPUT
+            echo "source=whisper" >> $GITHUB_OUTPUT
+          else
+            # From workflow_dispatch
+            echo "guid=${{ inputs.guid }}" >> $GITHUB_OUTPUT
+            echo "ghost_post_id=${{ inputs.ghost_post_id }}" >> $GITHUB_OUTPUT
+            echo "ghost_slug=${{ inputs.ghost_slug }}" >> $GITHUB_OUTPUT
+            echo "source=${{ inputs.source_override || 'auto' }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check local transcript
+        id: check-local
+        if: steps.extract-inputs.outputs.source == 'auto' || steps.extract-inputs.outputs.source == 'local'
+        run: |
+          SLUG="${{ steps.extract-inputs.outputs.ghost_slug }}"
+
+          # Check for local transcript file
+          if [ -f "transcripts/${SLUG}.html" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "path=transcripts/${SLUG}.html" >> $GITHUB_OUTPUT
+            echo "Found local transcript: transcripts/${SLUG}.html"
+          elif [ -f "transcripts/${SLUG}_formatted.html" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "path=transcripts/${SLUG}_formatted.html" >> $GITHUB_OUTPUT
+            echo "Found local transcript: transcripts/${SLUG}_formatted.html"
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "No local transcript found for slug: ${SLUG}"
+          fi
+
+          # Check for SRT
+          if [ -f "transcripts/${SLUG}.srt" ]; then
+            echo "srt_found=true" >> $GITHUB_OUTPUT
+          else
+            echo "srt_found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Download transcript from S3
+        id: check-s3
+        if: |
+          (steps.extract-inputs.outputs.source == 'auto' && steps.check-local.outputs.found != 'true') ||
+          steps.extract-inputs.outputs.source == 'whisper' ||
+          steps.extract-inputs.outputs.source == 's3'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_TRANSCRIPT_BUCKET: ${{ secrets.S3_TRANSCRIPT_BUCKET }}
+        run: |
+          GUID="${{ steps.extract-inputs.outputs.guid }}"
+
+          # If we have explicit S3 paths from Whisper callback, use those
+          if [ -n "${{ steps.extract-inputs.outputs.s3_html_path }}" ]; then
+            HTML_PATH="${{ steps.extract-inputs.outputs.s3_html_path }}"
+            SRT_PATH="${{ steps.extract-inputs.outputs.s3_srt_path }}"
+          else
+            # Default S3 paths based on GUID
+            HTML_PATH="s3://${S3_TRANSCRIPT_BUCKET}/transcripts/${GUID}/transcript.html"
+            SRT_PATH="s3://${S3_TRANSCRIPT_BUCKET}/transcripts/${GUID}/transcript.srt"
+          fi
+
+          # Try to download HTML transcript
+          mkdir -p /tmp/transcripts
+          if aws s3 cp "${HTML_PATH}" /tmp/transcripts/transcript.html 2>/dev/null; then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "path=/tmp/transcripts/transcript.html" >> $GITHUB_OUTPUT
+            echo "Downloaded transcript from S3: ${HTML_PATH}"
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "No S3 transcript found at: ${HTML_PATH}"
+          fi
+
+          # Try to download SRT
+          if aws s3 cp "${SRT_PATH}" /tmp/transcripts/transcript.srt 2>/dev/null; then
+            echo "srt_found=true" >> $GITHUB_OUTPUT
+            echo "Downloaded SRT from S3: ${SRT_PATH}"
+          else
+            echo "srt_found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Attach transcript to Ghost post
+        id: attach
+        env:
+          GHOST_URL: ${{ secrets.GHOST_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+          PRX_CLIENT_ID: ${{ secrets.PRX_CLIENT_ID }}
+          PRX_CLIENT_SECRET: ${{ secrets.PRX_CLIENT_SECRET }}
+          PRX_FEED_URL: ${{ secrets.PRX_FEED_URL }}
+        run: |
+          GUID="${{ steps.extract-inputs.outputs.guid }}"
+
+          # Determine transcript source and path
+          if [ "${{ steps.check-local.outputs.found }}" = "true" ]; then
+            SOURCE="local"
+            TRANSCRIPT_PATH="${{ steps.check-local.outputs.path }}"
+            SRT_AVAILABLE="${{ steps.check-local.outputs.srt_found }}"
+          elif [ "${{ steps.check-s3.outputs.found }}" = "true" ]; then
+            SOURCE="whisper"
+            TRANSCRIPT_PATH="${{ steps.check-s3.outputs.path }}"
+            SRT_AVAILABLE="${{ steps.check-s3.outputs.srt_found }}"
+          else
+            # Fall back to RSS transcript via update-transcripts command
+            SOURCE="rss"
+            TRANSCRIPT_PATH=""
+            SRT_AVAILABLE="false"
+          fi
+
+          echo "source=$SOURCE" >> $GITHUB_OUTPUT
+          echo "srt_available=$SRT_AVAILABLE" >> $GITHUB_OUTPUT
+
+          if [ "$SOURCE" = "rss" ]; then
+            # Use the update-transcripts command for RSS fallback
+            python -m src.main --env prod update-transcripts --guid "$GUID" --yes
+
+            if [ $? -eq 0 ]; then
+              echo "attached=true" >> $GITHUB_OUTPUT
+            else
+              echo "attached=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # Use Python to attach local/S3 transcript
+            python3 << EOF
+          import sys
+          sys.path.insert(0, '.')
+
+          from pathlib import Path
+          from src.config import get_config
+          from src.ghost_client import GhostClient, GhostPost
+          from src.state_tracker import StateTracker
+          from src.content_builder import build_transcript_section_html
+
+          config = get_config(env_name='prod')
+          client = GhostClient(
+              config.ghost_url,
+              config.ghost_admin_api_key,
+              config.ghost_api_version,
+          )
+          tracker = StateTracker(config.state_file)
+
+          guid = "$GUID"
+          ghost_post_id = "${{ steps.extract-inputs.outputs.ghost_post_id }}"
+          transcript_path = "$TRANSCRIPT_PATH"
+          source = "$SOURCE"
+          srt_available = "$SRT_AVAILABLE" == "true"
+
+          # Read transcript HTML
+          with open(transcript_path, 'r') as f:
+              transcript_html = f.read()
+
+          # Get current post
+          current_post = client.get_post(ghost_post_id)
+          current_html = current_post.get('html', '')
+          updated_at = current_post.get('updated_at')
+
+          # Check if transcript already present
+          if 'id="episode-transcript"' in current_html:
+              print('Transcript already present in post')
+              print('attached=true', file=open('$GITHUB_OUTPUT', 'a'))
+              sys.exit(0)
+
+          # Append transcript section
+          transcript_section = build_transcript_section_html(transcript_html)
+          new_html = current_html + '\\n' + transcript_section
+
+          # Update post
+          update_post = GhostPost(
+              title=current_post.get('title', ''),
+              html=new_html,
+          )
+          client.update_post(ghost_post_id, update_post, updated_at)
+
+          # Record in state tracker
+          tracker.record_transcript_synced(guid, source=source, srt_available=srt_available)
+
+          print(f'Attached transcript from {source}')
+          print('attached=true', file=open('$GITHUB_OUTPUT', 'a'))
+          EOF
+          fi
+
+      - name: Commit state file update
+        if: steps.attach.outputs.attached == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/published_episodes.prod.json
+
+          if git diff --cached --quiet; then
+            echo "No state changes to commit"
+          else
+            git commit -m "chore: Record transcript sync for ${{ steps.extract-inputs.outputs.guid }}
+
+            [Agent: GitHub Actions]
+
+            Source: ${{ steps.attach.outputs.source }}
+            SRT Available: ${{ steps.attach.outputs.srt_available }}
+
+            Co-Authored-By: GitHub Actions <noreply@github.com>"
+
+            git push
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Transcript Attachment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Episode GUID:** ${{ steps.extract-inputs.outputs.guid }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Ghost Post ID:** ${{ steps.extract-inputs.outputs.ghost_post_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Transcript Attached:** ${{ steps.attach.outputs.attached }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source:** ${{ steps.attach.outputs.source }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **SRT Available:** ${{ steps.attach.outputs.srt_available }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Mode:** ${{ inputs.mode || 'pre-publish' }}" >> $GITHUB_STEP_SUMMARY

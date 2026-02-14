@@ -480,6 +480,103 @@ class DovetailClient:
                 return None
             raise
 
+    def update_episode(
+        self,
+        episode_id: str,
+        updates: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Update an episode via the Dovetail API.
+
+        This is used for PRX write-back to set the episode's link field
+        to point to the Ghost post URL.
+
+        Args:
+            episode_id: The numeric episode ID (from PRX, not the GUID).
+            updates: Dictionary of fields to update. Common fields:
+                - link: URL to the episode's web page (Ghost post URL)
+                - description: Episode description
+                - title: Episode title
+
+        Returns:
+            Updated episode data from the API.
+
+        Raises:
+            DovetailAPIError: If the update request fails.
+
+        Example:
+            >>> client.update_episode("12345", {"link": "https://wondercabinet.com/episode-slug/"})
+        """
+        endpoint = f"/authorization/episodes/{episode_id}"
+        response = self._make_request("PUT", endpoint, json_data=updates)
+        logger.info(f"Updated episode {episode_id} with: {list(updates.keys())}")
+        return response
+
+    def get_episode_id_from_guid(
+        self,
+        guid: str,
+        podcast_id: Optional[str] = None,
+    ) -> Optional[str]:
+        """Get the numeric episode ID from a GUID.
+
+        The Dovetail API uses numeric IDs for update operations, but GUIDs
+        for lookups. This method fetches the episode and extracts its ID.
+
+        Args:
+            guid: Episode GUID (e.g., "prx_120_abc123").
+            podcast_id: Podcast ID. Uses default if not provided.
+
+        Returns:
+            Numeric episode ID as string, or None if not found.
+
+        Raises:
+            DovetailAPIError: If request fails (except 404).
+        """
+        pid = podcast_id or self.podcast_id
+        if not pid:
+            raise ValueError("podcast_id is required")
+
+        endpoint = f"/podcasts/{pid}/guids/{guid}"
+
+        try:
+            response = self._make_request("GET", endpoint)
+            # The episode ID is in the 'id' field of the response
+            return str(response.get("id", ""))
+        except DovetailAPIError as e:
+            if e.status_code == 404:
+                return None
+            raise
+
+    def set_episode_link(
+        self,
+        guid: str,
+        link_url: str,
+        podcast_id: Optional[str] = None,
+    ) -> bool:
+        """Set the episode's link field to the Ghost post URL.
+
+        Convenience method for PRX write-back that handles the GUID-to-ID
+        lookup and makes the update request.
+
+        Args:
+            guid: Episode GUID.
+            link_url: Full URL to the Ghost post.
+            podcast_id: Podcast ID. Uses default if not provided.
+
+        Returns:
+            True if update was successful, False if episode not found.
+
+        Raises:
+            DovetailAPIError: If the update request fails.
+        """
+        episode_id = self.get_episode_id_from_guid(guid, podcast_id)
+        if not episode_id:
+            logger.warning(f"Episode not found for GUID: {guid}")
+            return False
+
+        self.update_episode(episode_id, {"link": link_url})
+        logger.info(f"Set link for {guid} to: {link_url}")
+        return True
+
     def _parse_api_episode(self, data: dict[str, Any]) -> Episode:
         """Parse API response data into an Episode object.
 

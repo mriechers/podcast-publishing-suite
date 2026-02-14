@@ -1,0 +1,222 @@
+# Episode Import Workflow
+#
+# Imports a single episode from PRX Dovetail to Ghost CMS.
+# Handles the complete audio pipeline: download, peaks generation, upload.
+#
+# Triggered by:
+# - prx-poll.yml when new episodes are detected
+# - Manual workflow_dispatch for re-imports or testing
+
+name: Import Episode to Ghost
+
+on:
+  workflow_dispatch:
+    inputs:
+      guid:
+        description: 'Episode GUID to import'
+        required: true
+        type: string
+      title:
+        description: 'Episode title (for logging)'
+        required: false
+        type: string
+      podcast_id:
+        description: 'Podcast ID (optional override)'
+        required: false
+        type: string
+      status:
+        description: 'Ghost post status'
+        required: false
+        type: choice
+        options:
+          - draft
+          - published
+        default: draft
+      skip_audio_upload:
+        description: 'Skip audio upload to Ghost (use PRX URL)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  import-episode:
+    runs-on: ubuntu-latest
+    outputs:
+      ghost_post_id: ${{ steps.import.outputs.ghost_post_id }}
+      ghost_slug: ${{ steps.import.outputs.ghost_slug }}
+      transcript_available: ${{ steps.check-transcript.outputs.available }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install audiowaveform
+        run: |
+          # Install audiowaveform for waveform peaks generation
+          sudo apt-get update
+          sudo apt-get install -y audiowaveform
+
+          # Verify installation
+          audiowaveform --version
+
+      - name: Install ffmpeg
+        run: |
+          # ffmpeg may be needed for audio segment concatenation
+          sudo apt-get install -y ffmpeg
+          ffmpeg -version
+
+      - name: Check for local transcript
+        id: check-transcript
+        run: |
+          # Extract slug from GUID for transcript lookup
+          GUID="${{ inputs.guid }}"
+          # GUIDs are like "prx_120_uuid" - we need to look up the episode
+          # to get its actual slug from the link field
+
+          # For now, check if any transcript exists in /transcripts/
+          # The full slug lookup happens during import
+          if ls transcripts/*.html 2>/dev/null | head -1; then
+            echo "available=true" >> $GITHUB_OUTPUT
+            echo "Local transcripts directory has content"
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "No local transcripts found"
+          fi
+
+      - name: Import episode
+        id: import
+        env:
+          GHOST_URL: ${{ secrets.GHOST_URL }}
+          GHOST_ADMIN_API_KEY: ${{ secrets.GHOST_ADMIN_API_KEY }}
+          PRX_CLIENT_ID: ${{ secrets.PRX_CLIENT_ID }}
+          PRX_CLIENT_SECRET: ${{ secrets.PRX_CLIENT_SECRET }}
+          PRX_PODCAST_IDS: ${{ secrets.PRX_PODCAST_IDS }}
+          PRX_FEED_URL: ${{ secrets.PRX_FEED_URL }}
+        run: |
+          # Build import command
+          CMD="python -m src.main --env prod sync"
+          CMD="$CMD --source api"
+          CMD="$CMD --guid ${{ inputs.guid }}"
+          CMD="$CMD --status ${{ inputs.status || 'draft' }}"
+          CMD="$CMD --json-output"
+          CMD="$CMD --yes"
+
+          # Add audio upload unless skipped
+          if [ "${{ inputs.skip_audio_upload }}" != "true" ]; then
+            CMD="$CMD --upload-audio"
+          fi
+
+          echo "Running: $CMD"
+          OUTPUT=$($CMD)
+          EXIT_CODE=$?
+
+          echo "CLI Output: $OUTPUT"
+
+          # Parse result
+          if [ $EXIT_CODE -eq 0 ]; then
+            GHOST_POST_ID=$(echo "$OUTPUT" | python3 -c "
+            import sys, json
+            try:
+                data = json.load(sys.stdin)
+                posts = data.get('published_posts', [])
+                if posts:
+                    print(posts[0].get('ghost_post_id', ''))
+            except:
+                pass
+            ")
+
+            GHOST_SLUG=$(echo "$OUTPUT" | python3 -c "
+            import sys, json
+            try:
+                data = json.load(sys.stdin)
+                posts = data.get('published_posts', [])
+                if posts:
+                    print(posts[0].get('slug', ''))
+            except:
+                pass
+            ")
+
+            echo "ghost_post_id=$GHOST_POST_ID" >> $GITHUB_OUTPUT
+            echo "ghost_slug=$GHOST_SLUG" >> $GITHUB_OUTPUT
+            echo "Imported episode: $GHOST_POST_ID (slug: $GHOST_SLUG)"
+          else
+            echo "Import failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+
+      - name: Commit state file update
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/published_episodes.prod.json
+
+          if git diff --cached --quiet; then
+            echo "No state changes to commit"
+          else
+            git commit -m "chore: Record import of ${{ inputs.guid }}
+
+            [Agent: GitHub Actions]
+
+            Episode: ${{ inputs.title || inputs.guid }}
+            Ghost Post ID: ${{ steps.import.outputs.ghost_post_id }}
+
+            Co-Authored-By: GitHub Actions <noreply@github.com>"
+
+            git push
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Episode Import Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Episode:** ${{ inputs.title || inputs.guid }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **GUID:** ${{ inputs.guid }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Ghost Post ID:** ${{ steps.import.outputs.ghost_post_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Slug:** ${{ steps.import.outputs.ghost_slug }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ${{ inputs.status || 'draft' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Audio Upload:** ${{ inputs.skip_audio_upload != true }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Transcript Available:** ${{ steps.check-transcript.outputs.available }}" >> $GITHUB_STEP_SUMMARY
+
+  # Trigger transcript attachment if available
+  attach-transcript:
+    needs: import-episode
+    if: needs.import-episode.outputs.ghost_post_id != ''
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger transcript workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('Triggering transcript attachment workflow');
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'transcript-attach.yml',
+              ref: 'main',
+              inputs: {
+                guid: '${{ inputs.guid }}',
+                ghost_post_id: '${{ needs.import-episode.outputs.ghost_post_id }}',
+                ghost_slug: '${{ needs.import-episode.outputs.ghost_slug }}',
+                mode: 'pre-publish'
+              }
+            });
+
+            console.log('Transcript workflow triggered');

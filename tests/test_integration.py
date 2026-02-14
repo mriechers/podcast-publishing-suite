@@ -62,15 +62,15 @@ class TestSyncEpisodes:
 
         client = MagicMock(spec=GhostClient)
 
-        published, skipped, failed = sync_episodes(
+        result = sync_episodes(
             episodes=[sample_episode],
             client=client,
             tracker=tracker,
             dry_run=True,
         )
-        assert skipped == 1
-        assert published == 0
-        assert failed == 0
+        assert result.skipped == 1
+        assert result.published == 0
+        assert result.failed == 0
         # Client should not be called
         client.create_post.assert_not_called()
 
@@ -80,14 +80,14 @@ class TestSyncEpisodes:
         tracker = StateTracker(state_file)
         client = MagicMock(spec=GhostClient)
 
-        published, skipped, failed = sync_episodes(
+        result = sync_episodes(
             episodes=[sample_episode],
             client=client,
             tracker=tracker,
             dry_run=True,
         )
-        assert published == 1
-        assert failed == 0
+        assert result.published == 1
+        assert result.failed == 0
         client.create_post.assert_not_called()
 
     def test_failed_episodes_recorded_in_state(self, sample_episode: Episode, tmp_path: Path):
@@ -97,13 +97,13 @@ class TestSyncEpisodes:
         client = MagicMock(spec=GhostClient)
         client.create_post.side_effect = GhostAPIError("Server error", status_code=500)
 
-        published, skipped, failed = sync_episodes(
+        result = sync_episodes(
             episodes=[sample_episode],
             client=client,
             tracker=tracker,
         )
-        assert failed == 1
-        assert published == 0
+        assert result.failed == 1
+        assert result.published == 0
 
         # Check state
         ep = tracker.get_episode(sample_episode.guid)

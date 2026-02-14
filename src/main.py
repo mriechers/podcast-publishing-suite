@@ -13,6 +13,7 @@ import shutil
 import sys
 import tempfile
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -72,6 +73,35 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class SyncResult:
+    """Result of syncing episodes to Ghost.
+
+    Used for detailed JSON output in CI/CD workflows.
+    """
+    published: int = 0
+    skipped: int = 0
+    failed: int = 0
+    new_episodes: list = None  # Episodes that would be/were published
+    published_posts: list = None  # Details of actually published posts
+
+    def __post_init__(self):
+        if self.new_episodes is None:
+            self.new_episodes = []
+        if self.published_posts is None:
+            self.published_posts = []
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "published": self.published,
+            "skipped": self.skipped,
+            "failed": self.failed,
+            "new_episodes": self.new_episodes,
+            "published_posts": self.published_posts,
+        }
+
+
 def sync_episodes(
     episodes: list[Episode],
     client: GhostClient,
@@ -86,7 +116,7 @@ def sync_episodes(
     peaks_dir: Optional[Path] = None,
     ghost_url: str = "",
     upload_audio: bool = False,
-) -> tuple[int, int, int]:
+) -> SyncResult:
     """Sync episodes to Ghost.
 
     Args:
@@ -105,11 +135,9 @@ def sync_episodes(
         upload_audio: If True, download audio and upload to Ghost media library.
 
     Returns:
-        Tuple of (published_count, skipped_count, failed_count).
+        SyncResult with counts and episode details.
     """
-    published = 0
-    skipped = 0
-    failed = 0
+    result = SyncResult()
 
     for episode in episodes:
         ep_start = time.monotonic()
@@ -117,8 +145,23 @@ def sync_episodes(
         # Check if already published
         if tracker.is_published(episode.guid):
             logger.info(f"Skipping (already published): {episode.title}")
-            skipped += 1
+            result.skipped += 1
             continue
+
+        # Extract podcast ID from GUID for new_episodes list
+        podcast_id = ""
+        if episode.guid.startswith("prx_"):
+            parts = episode.guid.split("_")
+            if len(parts) >= 2:
+                podcast_id = parts[1]
+
+        # Track as new episode (for dry-run detection mode)
+        result.new_episodes.append({
+            "guid": episode.guid,
+            "title": episode.title,
+            "podcast_id": podcast_id,
+            "pub_date": episode.pub_date.isoformat() if episode.pub_date else "",
+        })
 
         # Image processing pipeline: download artwork → upload to Ghost → generate OG image
         ghost_image_url = None
@@ -260,6 +303,8 @@ def sync_episodes(
                 ghost_image_url=ghost_image_url,
                 og_image_url=og_image_url,
                 transcript_html=rss_transcript_html,
+                ghost_url=ghost_url,
+                post_slug=slug,
             )
         else:
             # Try to load local transcript first (from /transcripts directory)
@@ -320,19 +365,22 @@ def sync_episodes(
                 peaks_url=wc_peaks_url,
                 ghost_audio_url=wc_ghost_audio_url,
                 transcript_html=ttbook_transcript_html,
+                ghost_url=ghost_url,
+                post_slug=wc_slug,
             )
 
         if dry_run:
             logger.info(f"[DRY RUN] Would publish: {episode.title}")
             logger.debug(f"  Status: {status}")
             logger.debug(f"  Tags: {[t['name'] for t in ghost_post.tags]}")
-            published += 1
+            result.published += 1
             continue
 
         # Publish to Ghost
         try:
-            result = client.create_post(ghost_post)
-            ghost_post_id = result.get("id", "")
+            post_result = client.create_post(ghost_post)
+            ghost_post_id = post_result.get("id", "")
+            ghost_slug = post_result.get("slug", "")
 
             # Record the publish
             tracker.record_publish(
@@ -343,9 +391,21 @@ def sync_episodes(
                 status=status,
             )
 
+            # Update ghost_slug in state tracker
+            if ghost_slug:
+                tracker.update_ghost_slug(episode.guid, ghost_slug)
+
             ep_elapsed = time.monotonic() - ep_start
             logger.info(f"Published: {episode.title} (ID: {ghost_post_id}) [{ep_elapsed:.1f}s]")
-            published += 1
+            result.published += 1
+
+            # Track published post details for JSON output
+            result.published_posts.append({
+                "guid": episode.guid,
+                "ghost_post_id": ghost_post_id,
+                "slug": ghost_slug,
+                "title": episode.title,
+            })
 
         except GhostAPIError as e:
             logger.error(f"Failed to publish '{episode.title}': {e}")
@@ -354,9 +414,9 @@ def sync_episodes(
                 title=episode.title,
                 published_at=format_published_at(episode),
             )
-            failed += 1
+            result.failed += 1
 
-    return published, skipped, failed
+    return result
 
 
 def cmd_sync(args: argparse.Namespace) -> int:
@@ -586,7 +646,7 @@ def _run_sync(
             logger.error("--peaks-dir required when --generate-peaks is enabled (without --upload-audio)")
             return EXIT_CONFIG_ERROR
 
-    published, skipped, failed = sync_episodes(
+    sync_result = sync_episodes(
         episodes,
         client,  # type: ignore
         tracker,
@@ -606,26 +666,29 @@ def _run_sync(
 
     # Summary
     logger.info(
-        f"Sync complete: {published} published, {skipped} skipped, "
-        f"{failed} failed [{elapsed}s]"
+        f"Sync complete: {sync_result.published} published, {sync_result.skipped} skipped, "
+        f"{sync_result.failed} failed [{elapsed}s]"
     )
 
     # Structured JSON output for CI/CD consumption
     if json_output:
-        exit_status = "success" if failed == 0 else "partial_failure"
+        exit_status = "success" if sync_result.failed == 0 else "partial_failure"
         summary = {
             "status": exit_status,
-            "published": published,
-            "skipped": skipped,
-            "failed": failed,
+            "published": sync_result.published,
+            "skipped": sync_result.skipped,
+            "failed": sync_result.failed,
             "feed_type": feed_type,
             "source": source,
             "dry_run": dry_run,
             "elapsed_seconds": elapsed,
+            # New fields for CI/CD workflows
+            "new_episodes": sync_result.new_episodes,
+            "published_posts": sync_result.published_posts,
         }
         print(json_module.dumps(summary))
 
-    return EXIT_SUCCESS if failed == 0 else EXIT_PARTIAL_FAILURE
+    return EXIT_SUCCESS if sync_result.failed == 0 else EXIT_PARTIAL_FAILURE
 
 
 def cmd_list(args: argparse.Namespace) -> int:
@@ -892,15 +955,29 @@ def cmd_update_metadata(args: argparse.Namespace) -> int:
             skipped += 1
             continue
 
+        # Extract slug from episode link for canonical URL generation
+        post_slug = extract_slug_from_link(episode.link) if episode.link else None
+
+        # Determine URL prefix based on feed type
+        # Luminous episodes live at /luminous/{slug}/, Wonder Cabinet at /{slug}/
+        url_prefix = "luminous" if feed_type == "luminous" else None
+
         # Build new metadata (show tag public, categories as internal tags)
         new_tags = build_tags(episode, primary_tag=show_tag)
-        jsonld = build_jsonld_metadata(episode, show_name=show_tag)
+        jsonld = build_jsonld_metadata(
+            episode,
+            show_name=show_tag,
+            ghost_url=config.ghost_url,
+            post_slug=post_slug,
+            url_prefix=url_prefix,
+        )
 
         if dry_run:
             logger.info(f"[DRY RUN] Would update: {title}")
             logger.info(f"  Post ID: {ghost_post_id}")
             logger.info(f"  New tags: {new_tags}")
             logger.info(f"  Categories in JSON-LD: {episode.categories}")
+            logger.info(f"  Canonical URL: {config.ghost_url}/{url_prefix + '/' if url_prefix else ''}{post_slug}/")
             updated += 1
             continue
 
@@ -914,13 +991,24 @@ def cmd_update_metadata(args: argparse.Namespace) -> int:
                 failed += 1
                 continue
 
-            # Create minimal update post (only changing tags and codeinjection_head)
+            # Build canonical URL for the post
+            if post_slug:
+                base = config.ghost_url.rstrip('/')
+                if url_prefix:
+                    canonical_url = f"{base}/{url_prefix}/{post_slug}/"
+                else:
+                    canonical_url = f"{base}/{post_slug}/"
+            else:
+                canonical_url = episode.link  # Fallback
+
+            # Create minimal update post (only changing tags, codeinjection_head, and canonical_url)
             # We need to preserve the existing content
             update_post = GhostPost(
                 title=current_post.get("title", title),
                 html=current_post.get("html", ""),
                 tags=new_tags,
                 codeinjection_head=jsonld,
+                canonical_url=canonical_url,
             )
 
             # Update the post

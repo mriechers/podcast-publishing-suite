@@ -13,12 +13,66 @@ from src.content_builder import (
     build_luminous_ghost_post,
     build_podlink_url,
     build_transcript_section_html,
+    format_episode_links,
     format_rss_transcript_html,
     format_transcript_html,
     get_apple_id_from_guid,
     sanitize_html,
 )
 from src.feed_parser import Episode
+
+
+class TestEpisodeLinksFormatting:
+    """Validate episode links are formatted with proper CSS class for WC-Episode theme."""
+
+    def test_adds_css_class_to_ul(self):
+        """Links list should get wc-episode-notes-content-links class."""
+        html = '<ul><li><a href="https://example.com">Link</a></li></ul>'
+        result = format_episode_links(html)
+        assert 'class="wc-episode-notes-content-links"' in result
+
+    def test_adds_target_blank_to_links(self):
+        """Links should open in new tab."""
+        html = '<ul><li><a href="https://example.com">Link</a></li></ul>'
+        result = format_episode_links(html)
+        assert 'target="_blank"' in result
+        assert 'rel="noopener noreferrer"' in result
+
+    def test_wraps_in_ghost_html_card_markers(self):
+        """Links list should be wrapped in Ghost HTML card markers."""
+        html = '<ul><li><a href="https://example.com">Link</a></li></ul>'
+        result = format_episode_links(html)
+        assert '<!--kg-card-begin: html-->' in result
+        assert '<!--kg-card-end: html-->' in result
+
+    def test_extracts_descriptive_text_from_prx_format(self):
+        """PRX format 'Description: <a>URL</a>' should become '<a>Description</a>'."""
+        html = '''<ul>
+<li>Deep Time: <a href="https://example.com"><strong>https://example.com</strong></a></li>
+</ul>'''
+        result = format_episode_links(html)
+        assert '>Deep Time</a>' in result
+        assert 'https://example.com</strong>' not in result
+
+    def test_preserves_link_text_when_inside_anchor(self):
+        """Format '<a>Link text</a>' should preserve the link text."""
+        html = '<ul><li><a href="https://example.com">Sophie Strand\'s website</a></li></ul>'
+        result = format_episode_links(html)
+        assert ">Sophie Strand's website</a>" in result
+
+    def test_preserves_non_link_lists(self):
+        """Plain lists without links should not be modified."""
+        html = '<ul><li>Item one</li><li>Item two</li></ul>'
+        result = format_episode_links(html)
+        assert 'wc-episode-notes-content-links' not in result
+        assert result == html
+
+    def test_preserves_surrounding_content(self):
+        """Content before and after the links list should be preserved."""
+        html = '<p>Before</p><ul><li><a href="https://x.com">Link</a></li></ul><p>After</p>'
+        result = format_episode_links(html)
+        assert '<p>Before</p>' in result
+        assert '<p>After</p>' in result
 
 
 class TestHTMLSanitization:
