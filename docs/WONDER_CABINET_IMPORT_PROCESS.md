@@ -348,6 +348,7 @@ After importing an episode, verify:
 
 ## Related Documentation
 
+- [SHOW_NOTES_FORMAT.md](./SHOW_NOTES_FORMAT.md) - Show notes formatting conventions (link format, boilerplate, chapters)
 - [COMPREHENSIVE_DESIGN.md](./COMPREHENSIVE_DESIGN.md) - Full system architecture
 - [WAVEFORM_PEAKS_IMPLEMENTATION.md](./WAVEFORM_PEAKS_IMPLEMENTATION.md) - Peaks generation details
 - [AUTOMATION_DESIGN.md](./AUTOMATION_DESIGN.md) - GitHub Actions workflow
