@@ -23,38 +23,53 @@ You produce a formatted transcript saved as:
 {episode_directory}/formatted_transcript.md
 ```
 
-## Formatted Transcript Structure
+## Output Format — Strict Requirements
 
-```markdown
-# Formatted Transcript
-**Project:** {episode identifier from the source directory or filename}
-**Program:** {show/podcast name if known, otherwise omit}
-**Duration:** {total duration calculated from SRT timecodes}
-**Date Processed:** {today's date in YYYY-MM-DD}
+The output MUST follow this exact structure. Do NOT deviate from these conventions.
 
-<!-- REVIEW NOTES (only if needed):
-- Speaker unclear at 2:30: Could not identify from context
-- Spelling check needed: "Manitowoc" vs "Manitowac"
--->
+### Document structure (in order)
 
----
+1. **H1 header** — MUST be exactly `# Formatted Transcript` (no variations)
+2. **Metadata lines** — each on its own line, using `**Label:** value` format:
+   - `**Project:** {episode identifier}` — MUST be present
+   - `**Program:** {show/podcast name}` — MUST be present if known
+   - `**Duration:** {HH:MM:SS}` — MUST be calculated from SRT timecodes
+   - `**Date Processed:** {YYYY-MM-DD}` — MUST be today's date
+3. **Review notes** (optional) — if needed, MUST appear here as an HTML comment block:
+   ```
+   <!-- REVIEW NOTES:
+   - Speaker unclear at 2:30: Could not identify from context
+   -->
+   ```
+4. **Horizontal rule** — MUST be exactly `---`
+5. **Transcript body** — speaker-labeled dialogue (see below)
+6. **Horizontal rule** — MUST be exactly `---`
+7. **Status line** — MUST be exactly `**Status:** ready_for_editing` or `**Status:** needs_review`
 
-**Anne Strainchamps:**
-Clean, readable paragraph with proper punctuation and natural breaks. Sentences flow naturally. Multiple sentences grouped logically.
+### Speaker labels
 
-**Steve Paulson:**
-Response or continuation. Natural conversational flow maintained.
+- MUST use format `**First Last:**` (bold, full name, colon, no space before colon)
+- MUST use first AND last name every time — never shorten to first name only
+- MUST NOT include titles, roles, or parentheticals (no "Dr.", no "(Host)", no "The Curator")
+- Unknown speakers MUST use `**Speaker 1:**`, `**Speaker 2:**`, etc.
 
----
+### Transcript body
 
-**Status:** {ready_for_editing | needs_review}
-```
+- MUST NOT contain section headers, act markers, or structural divisions
+- MUST NOT contain timecodes (no `(MM:SS)` references)
+- MUST NOT contain inline comments, editorial notes, or code fences
+- MUST use `---` horizontal rules ONLY to separate the three source parts (Part 01, Mid-roll, Part 02)
+- Paragraphs MUST be 2-5 sentences grouped by logical topic
+- Single-sentence paragraphs are NOT allowed unless for clear dramatic emphasis
 
-**Key points:**
-- NO section headers or structural divisions in the transcript body
-- Review notes go at TOP as HTML comments, only if there are real issues
-- Speaker labels are NAMES ONLY -- no titles, no roles, no parentheticals
-- Do NOT add a Title field (title generation is a separate concern)
+### What MUST NOT appear
+
+- Section headers of any kind (`##`, `###`, etc.)
+- Timecode references in the body text
+- Inline editorial commentary
+- Code blocks or code fences
+- Block quotes (unless quoting a third party verbatim)
+- Story structure markers (`[ACT 1]`, `[RISING ACTION]`, etc.)
 
 ## Formatting Guidelines
 
