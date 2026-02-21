@@ -450,11 +450,14 @@ def build_audio_player_card(
 # =============================================================================
 
 def load_transcript(slug: str, cache_dir: Optional[Path] = None) -> Optional[str]:
-    """Load transcript from TTBOOK cache.
+    """Load transcript from TTBOOK cache or canonical episode folder.
 
     Args:
         slug: Episode slug (e.g., 'luminous-melissa-etheridge-ayahuasca')
-        cache_dir: Path to cache directory, defaults to sample-data/ttbook-cache/luminous
+        cache_dir: Path to cache directory or canonical episode folder.
+            If the directory contains a transcript.txt, loads it directly.
+            Otherwise falls back to {slug}_transcript.txt naming convention.
+            Defaults to sample-data/ttbook-cache/luminous.
 
     Returns:
         Transcript text or None if not found.
@@ -463,6 +466,13 @@ def load_transcript(slug: str, cache_dir: Optional[Path] = None) -> Optional[str
         # Default to project sample-data
         cache_dir = Path(__file__).parent.parent / 'sample-data' / 'ttbook-cache' / 'luminous'
 
+    # Canonical episode folder: look for transcript.txt directly
+    canonical = cache_dir / 'transcript.txt'
+    if canonical.exists():
+        logger.info(f"Found canonical transcript: {canonical}")
+        return canonical.read_text()
+
+    # Legacy naming convention
     transcript_file = cache_dir / f'{slug}_transcript.txt'
     if transcript_file.exists():
         return transcript_file.read_text()
@@ -475,9 +485,13 @@ def load_wc_transcript(episode_title: str, transcript_dir: Optional[Path] = None
     Looks for transcript files matching the episode title pattern.
     Files should be named like: 101_Sophie_Strand.txt, 102_Carlo_Rovelli.txt
 
+    When transcript_dir points to a canonical episode folder containing
+    transcript.txt, loads it directly without fuzzy matching.
+
     Args:
         episode_title: Episode title to search for (partial match on name).
-        transcript_dir: Path to transcripts directory, defaults to project /transcripts.
+        transcript_dir: Path to transcripts directory or canonical episode folder.
+            Defaults to project /transcripts.
 
     Returns:
         Transcript text or None if not found.
@@ -487,6 +501,12 @@ def load_wc_transcript(episode_title: str, transcript_dir: Optional[Path] = None
 
     if not transcript_dir.exists():
         return None
+
+    # Canonical episode folder: look for transcript.txt directly
+    canonical = transcript_dir / 'transcript.txt'
+    if canonical.exists():
+        logger.info(f"Found canonical transcript: {canonical}")
+        return canonical.read_text()
 
     # Extract a key name from the title for matching
     # E.g., "Sophie Strand: Ecological Storytelling..." -> "Sophie Strand"

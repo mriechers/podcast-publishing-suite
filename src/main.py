@@ -194,6 +194,7 @@ def sync_episodes(
     upload_audio: bool = False,
     dovetail_client: Optional[DovetailClient] = None,
     ghost_site_url: str = "",
+    transcript_dir: Optional[Path] = None,
 ) -> SyncResult:
     """Sync episodes to Ghost.
 
@@ -213,6 +214,8 @@ def sync_episodes(
         upload_audio: If True, download audio and upload to Ghost media library.
         dovetail_client: Optional DovetailClient for PRX writeback (sets episode link to Ghost URL).
         ghost_site_url: Public site URL for PRX writeback canonical links. Defaults to ghost_url.
+        transcript_dir: Optional directory containing a transcript.txt file (canonical episode folder).
+            When provided, overrides default transcript search paths for both WC and Luminous.
 
     Returns:
         SyncResult with counts and episode details.
@@ -279,7 +282,7 @@ def sync_episodes(
         if feed_type == "luminous":
             # Try to load transcript from cache
             slug = extract_slug_from_link(episode.link, episode.title)
-            transcript = load_transcript(slug) if slug else None
+            transcript = load_transcript(slug, cache_dir=transcript_dir) if slug else None
             if transcript:
                 logger.info(f"  Found transcript for: {slug}")
 
@@ -387,7 +390,7 @@ def sync_episodes(
         else:
             # Try to load local transcript first (from /transcripts directory)
             ttbook_transcript_html = None
-            wc_transcript = load_wc_transcript(episode.title)
+            wc_transcript = load_wc_transcript(episode.title, transcript_dir=transcript_dir)
             if wc_transcript:
                 logger.info(f"  Found local transcript for: {episode.title}")
                 ttbook_transcript_html = format_transcript_html(wc_transcript)
@@ -763,6 +766,11 @@ def _run_sync(
             logger.error("--peaks-dir required when --generate-peaks is enabled (without --upload-audio)")
             return EXIT_CONFIG_ERROR
 
+    # Resolve transcript directory from CLI arg
+    transcript_dir = None
+    if hasattr(args, 'transcript_dir') and args.transcript_dir:
+        transcript_dir = Path(args.transcript_dir)
+
     sync_result = sync_episodes(
         episodes,
         client,  # type: ignore
@@ -779,6 +787,7 @@ def _run_sync(
         upload_audio=upload_audio,
         dovetail_client=api_client,
         ghost_site_url=config.ghost_site_url,
+        transcript_dir=transcript_dir,
     )
 
     elapsed = round(time.monotonic() - sync_start, 1)
@@ -1382,6 +1391,10 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="Directory to save peaks JSON files (e.g., /path/to/theme/assets/peaks)",
     )
     sync_parser.add_argument(
+        "--transcript-dir",
+        help="Directory containing transcript.txt (canonical episode folder). Overrides default transcript search paths.",
+    )
+    sync_parser.add_argument(
         "--no-upload-audio",
         action="store_true",
         help="Skip downloading audio and uploading to Ghost media library (use PRX tracking URLs instead)",
@@ -1483,6 +1496,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         generate_peaks=False,
         peaks_dir=None,
         no_upload_audio=False,
+        transcript_dir=None,
         json_output=False,
         yes=False,
     )
