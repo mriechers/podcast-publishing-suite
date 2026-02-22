@@ -17,24 +17,6 @@
     "prx_writeback_done": true,
     "ghost_slug": "introducing-wonder-cabinet"
   },
-  "prx_120_d3c666b2-79bd-42a4-8344-f46bcec7940c": {
-    "ghost_post_id": "697c482100bb330001068783",
-    "title": "Coming Soon! Wonder Cabinet!",
-    "published_at": "2025-11-05T12:00:00.000Z",
-    "synced_at": "2026-01-29T23:56:49.018638",
-    "status": "draft",
-    "audio_uploaded": false,
-    "audio_ghost_url": "",
-    "peaks_uploaded": false,
-    "transcript_synced": false,
-    "transcript_source": "",
-    "srt_available": false,
-    "video_generated": false,
-    "youtube_id": "",
-    "social_queued": false,
-    "prx_writeback_done": false,
-    "ghost_slug": ""
-  },
   "prx_120_1aafe930-8e1b-4135-9f44-c712df82f570": {
     "ghost_post_id": "697db99300bb33000106882a",
     "title": "Sophie Strand: Ecological Storytelling and Mythic Imagination",
@@ -51,14 +33,14 @@
     "youtube_id": "",
     "social_queued": false,
     "prx_writeback_done": true,
-    "ghost_slug": ""
+    "ghost_slug": "sophie-strand-ecological-storytelling-and-mythic-imagination"
   },
   "prx_120_1bca3c3e-b5bc-4eae-bfd2-3f12e6e56b04": {
-    "ghost_post_id": "6986911eaa8b2100016a9c28",
+    "ghost_post_id": "69869aa3aa8b2100016a9c3a",
     "title": "Carlo Rovelli: Cosmic Mysteries and the Politics of Wonder",
     "published_at": "2026-02-07T12:00:00.000Z",
     "synced_at": "2026-02-06T19:10:54.512062",
-    "status": "draft",
+    "status": "published",
     "audio_uploaded": false,
     "audio_ghost_url": "",
     "peaks_uploaded": false,
@@ -69,7 +51,7 @@
     "youtube_id": "",
     "social_queued": false,
     "prx_writeback_done": true,
-    "ghost_slug": ""
+    "ghost_slug": "carlo-rovelli-cosmic-mysteries-and-the-politics-of-wonder"
   },
   "prx_120_51f01251-1815-485d-ace9-dd68aadae833": {
     "ghost_post_id": "6990234ae3e894000119a2ea",
@@ -89,7 +71,25 @@
     "prx_writeback_done": true,
     "ghost_slug": "rebecca-solnit-hope-after-the-end"
   },
+  "prx_120_2526ee68-626b-4340-a4bf-4ee672e98d6f": {
+    "ghost_post_id": "69991d73e3ea5c00018c4466",
+    "title": "George Saunders: Angels, Ghosts and the Moral Imagination",
+    "published_at": "2026-02-21T12:00:00.000Z",
+    "synced_at": "2026-02-20T20:50:28.148929",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": true,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": true,
+    "ghost_slug": "george-saunders-angels-ghosts-and-the-moral-imagination"
+  },
   "_metadata": {
-    "last_sync_time": "2026-02-14T01:24:33.194057"
+    "last_sync_time": "2026-02-20T20:50:05.716009"
   }
 }
