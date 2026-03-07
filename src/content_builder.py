@@ -162,6 +162,20 @@ def format_episode_links(description_html: str) -> str:
                 text_without_link = re.sub(r'<strong>|</strong>', '', text_without_link)
                 text_without_link = text_without_link.strip().rstrip(':').strip()
 
+                # Check if remaining text is just punctuation/suffix (source name was inside the <a> tag)
+                stripped_remaining = text_without_link.lstrip()
+                if not stripped_remaining or stripped_remaining[0:1] in '—–-:,':
+                    inner_match = re.search(r'<a\s+[^>]*>(.*?)</a>', content, re.DOTALL | re.IGNORECASE)
+                    if inner_match:
+                        source_name = re.sub(r'<[^>]+>', '', inner_match.group(1)).strip()
+                        if source_name:
+                            suffix = text_without_link.strip()
+                            # Clean up leading punctuation for display
+                            if suffix and suffix[0] in '—–-':
+                                suffix = ' ' + suffix  # ensure space before emdash
+                            link = f'<a href="{href}" target="_blank" rel="noopener noreferrer">{source_name}</a>'
+                            return f'<li>{link}{suffix}</li>'
+
                 if text_without_link:
                     link_text = text_without_link
                 else:
@@ -466,7 +480,13 @@ def load_transcript(slug: str, cache_dir: Optional[Path] = None) -> Optional[str
         # Default to project sample-data
         cache_dir = Path(__file__).parent.parent / 'sample-data' / 'ttbook-cache' / 'luminous'
 
-    # Canonical episode folder: look for transcript.txt directly
+    # Canonical episode folder: prefer formatted_transcript.md (speaker attribution)
+    formatted_md = cache_dir / 'formatted_transcript.md'
+    if formatted_md.exists():
+        logger.info(f"Found formatted transcript: {formatted_md}")
+        return formatted_md.read_text()
+
+    # Fallback to plain transcript.txt
     canonical = cache_dir / 'transcript.txt'
     if canonical.exists():
         logger.info(f"Found canonical transcript: {canonical}")
@@ -502,7 +522,13 @@ def load_wc_transcript(episode_title: str, transcript_dir: Optional[Path] = None
     if not transcript_dir.exists():
         return None
 
-    # Canonical episode folder: look for transcript.txt directly
+    # Canonical episode folder: prefer formatted_transcript.md (speaker attribution)
+    formatted_md = transcript_dir / 'formatted_transcript.md'
+    if formatted_md.exists():
+        logger.info(f"Found formatted transcript: {formatted_md}")
+        return formatted_md.read_text()
+
+    # Fallback to plain transcript.txt
     canonical = transcript_dir / 'transcript.txt'
     if canonical.exists():
         logger.info(f"Found canonical transcript: {canonical}")
@@ -513,6 +539,21 @@ def load_wc_transcript(episode_title: str, transcript_dir: Optional[Path] = None
     # E.g., "Carlo Rovelli: Cosmic Mysteries..." -> "Carlo Rovelli"
     title_parts = episode_title.split(':')
     guest_name = title_parts[0].strip() if title_parts else episode_title
+
+    # Look for subdirectories matching guest name, prefer formatted_transcript.md
+    for subdir in transcript_dir.iterdir():
+        if subdir.is_dir():
+            subdir_name_normalized = subdir.name.replace('_', ' ')
+            if guest_name.lower() in subdir_name_normalized.lower():
+                # Try formatted_transcript.md first
+                formatted_subdir = subdir / 'formatted_transcript.md'
+                if formatted_subdir.exists():
+                    logger.info(f"Found formatted transcript in subdir: {formatted_subdir}")
+                    return formatted_subdir.read_text()
+                # Fallback to any .txt file in matching subdir
+                for txt_file in subdir.glob('*.txt'):
+                    logger.info(f"Found transcript in subdir: {txt_file}")
+                    return txt_file.read_text()
 
     # Look for transcript files containing the guest name
     for txt_file in transcript_dir.glob('*.txt'):
@@ -544,8 +585,40 @@ def is_placeholder_transcript(transcript: str) -> bool:
     return TRANSCRIPT_PLACEHOLDER in transcript and len(transcript.strip()) < 250
 
 
+def _strip_transcript_metadata(text: str) -> str:
+    """Strip frontmatter and postscript from a formatted transcript.
+
+    Formatted transcripts have a consistent structure:
+    - Frontmatter: title, episode metadata, followed by ---
+    - Body: the actual dialogue
+    - Postscript: --- followed by status field and formatting notes
+
+    This extracts only the dialogue body between the first and last
+    --- separators. If no separators exist, returns the text unchanged.
+    """
+    parts = re.split(r'^---\s*$', text, flags=re.MULTILINE)
+    if len(parts) >= 3:
+        # Has both frontmatter and postscript — take the middle
+        return '\n'.join(parts[1:-1]).strip()
+    if len(parts) == 2:
+        # Has only one separator — frontmatter or postscript
+        # If the first part looks like metadata (short, has **Key:** lines),
+        # take the second part; otherwise take the first
+        if re.search(r'^\*\*(Episode|Guest|Hosts|Duration|Status):\*\*', parts[0], re.MULTILINE):
+            return parts[1].strip()
+        return parts[0].strip()
+    return text.strip()
+
+
 def format_transcript_html(transcript: str) -> str:
     """Convert transcript text to HTML with speaker formatting.
+
+    Handles two formats:
+    - Markdown (formatted_transcript.md): **Speaker:** dialogue, # headings, ---
+    - Plain text (transcript.txt): - [Speaker] dialogue
+
+    For markdown transcripts, strips frontmatter (title, episode metadata)
+    and postscript (status, formatting notes) before rendering.
 
     Args:
         transcript: Raw transcript text with speaker attributions.
@@ -555,6 +628,12 @@ def format_transcript_html(transcript: str) -> str:
     """
     if not transcript:
         return ''
+
+    # Detect markdown format: has **bold** speaker attributions or # headings
+    if re.search(r'^\*\*[^*]+:\*\*', transcript, re.MULTILINE) or transcript.startswith('#'):
+        import markdown
+        body = _strip_transcript_metadata(transcript)
+        return markdown.markdown(body)
 
     lines = transcript.strip().split('\n')
     html_lines = []
@@ -781,12 +860,10 @@ def build_transcript_section_html(transcript_html: str) -> str:
         Complete Ghost HTML card with transcript section.
     """
     return (
-        '<!--kg-card-begin: html-->\n'
-        '<div id="episode-transcript" class="episode-transcript">\n'
-        '<h2>Transcript</h2>\n'
-        f'{transcript_html}\n'
-        '</div>\n'
-        '<!--kg-card-end: html-->'
+        '<div class="episode-transcript">'
+        '<h3>Transcript</h3>'
+        f'{transcript_html}'
+        '</div>'
     )
 
 

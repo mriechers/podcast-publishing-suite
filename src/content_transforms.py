@@ -191,6 +191,9 @@ WC_SUBSCRIPTION_REMINDER = r'''<p>[^<]*keep your subscription active[^<]*</p>'''
 # Dash dividers: <p>--</p> or <p>---</p> (with optional whitespace)
 WC_DASH_DIVIDER = r'''<p>\s*-{2,}\s*</p>'''
 
+# Single emdash divider: <p>—</p> (Unicode em dash, not ASCII dashes)
+WC_EMDASH_DIVIDER = r'''<p>\s*[—\u2014]\s*</p>'''
+
 # Chapters block format 1: a <p>Chapters:</p> heading followed by timestamped lines with <br>
 # Matches: <p>Chapters:</p><p>00:00:00 Title<br>00:04:34 Title<br>...</p>
 WC_CHAPTERS_BLOCK = r'''<p>\s*Chapters:\s*</p>\s*<p>\s*(?:\d{2}:\d{2}:\d{2}\s+[^<]+(?:<br\s*/?>?\s*)?)+\s*</p>'''
@@ -199,6 +202,10 @@ WC_CHAPTERS_BLOCK = r'''<p>\s*Chapters:\s*</p>\s*<p>\s*(?:\d{2}:\d{2}:\d{2}\s+[^
 # Matches consecutive: <p>00:00:00 Title</p><p>00:04:10 Title</p>...
 # Requires at least 2 consecutive timestamp paragraphs to avoid false positives
 WC_TIMESTAMP_PARAGRAPHS = r'''(?:<p>\s*\d{2}:\d{2}:\d{2}\s+[^<]+</p>\s*){2,}'''
+
+# Chapters format 3: MM:SS timestamps (shorter format without hours)
+# Matches: <p>0:00 — Title</p> or <p>4:34 - Title</p>
+WC_SHORT_TIMESTAMP_PARAGRAPHS = r'''(?:<p>\s*\d{1,2}:\d{2}\s*[—–\-]\s*.+?</p>\s*){2,}'''
 
 # "Hosted by" closing line - remove the standard show credits
 # e.g., '<p><em>Wonder Cabinet</em> is hosted by Anne Strainchamps and Steve Paulson.</p>'
@@ -285,12 +292,26 @@ TTBOOK_CONFIG = FeedTransformConfig(
             marker_id="wc_timestamps",
             description="Removes consecutive timestamp paragraphs"
         ),
+        # Strip short timestamp paragraphs (MM:SS format)
+        RemovalRule(
+            name="wc_short_timestamps",
+            pattern=WC_SHORT_TIMESTAMP_PARAGRAPHS,
+            marker_id="wc_short_timestamps",
+            description="Removes consecutive MM:SS timestamp paragraphs"
+        ),
         # Strip dash dividers (-- or ---)
         RemovalRule(
             name="wc_dividers",
             pattern=WC_DASH_DIVIDER,
             marker_id="wc_dividers",
             description="Removes <p>--</p> and <p>---</p> divider paragraphs"
+        ),
+        # Strip emdash dividers (single Unicode em dash)
+        RemovalRule(
+            name="wc_emdash_dividers",
+            pattern=WC_EMDASH_DIVIDER,
+            marker_id="wc_emdash_dividers",
+            description="Removes <p>—</p> emdash divider paragraphs"
         ),
         # Strip "hosted by" credits line
         RemovalRule(

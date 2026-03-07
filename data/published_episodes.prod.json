@@ -89,7 +89,43 @@
     "prx_writeback_done": true,
     "ghost_slug": "george-saunders-angels-ghosts-and-the-moral-imagination"
   },
+  "prx_120_d324a707-1216-457a-9d03-b52a32811e76": {
+    "ghost_post_id": "69a2bac369872700019b99fd",
+    "title": "Renee Bergland: The Enchanted Science of Emily Dickinson and Charles Darwin",
+    "published_at": "2026-02-28T12:00:00.000Z",
+    "synced_at": "2026-02-28T03:52:05.220868",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": true,
+    "transcript_source": "shows/wonder-cabinet/episodes/WC_S01_05_Renee_Bergland/formatted_transcript.md",
+    "srt_available": true,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": false,
+    "ghost_slug": "renee-bergland-the-enchanted-science-of-emily-dickinson-and-charles-darwin"
+  },
+  "prx_120_47f7afd3-92b3-4783-8ed6-7f7c684f91ae": {
+    "ghost_post_id": "69ab7bddb1a9d50001c4f166",
+    "title": "Robert Macfarlane: The Soul of Rivers and the Rights of Nature",
+    "published_at": "2026-03-07T12:00:00.000Z",
+    "synced_at": "2026-03-06T19:14:07.267540",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": true,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": false,
+    "ghost_slug": "robert-macfarlane-the-soul-of-rivers-and-the-rights-of-nature"
+  },
   "_metadata": {
-    "last_sync_time": "2026-02-20T20:50:05.716009"
+    "last_sync_time": "2026-03-06T19:13:32.821147"
   }
 }

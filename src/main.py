@@ -35,6 +35,7 @@ from .content_builder import (
     load_transcript,
     load_wc_transcript,
     process_lexical_visibility,
+    VISIBILITY_WEB_ONLY,
 )
 from .waveform_peaks import (
     WaveformError,
@@ -1240,22 +1241,33 @@ def cmd_update_transcripts(args: argparse.Namespace) -> int:
 
         # Find episode in RSS feed
         episode = episodes_by_guid.get(guid)
-        if not episode or not episode.transcript_url:
-            logger.debug(f"No transcript URL for: {title}")
-            skipped += 1
-            continue
 
         if dry_run:
-            logger.info(f"[DRY RUN] Would add transcript to: {title}")
-            logger.info(f"  Transcript URL: {episode.transcript_url}")
-            logger.info(f"  Transcript type: {episode.transcript_type}")
-            updated += 1
+            # Check if we have local or RSS transcript
+            has_transcript = False
+            if hasattr(args, 'transcript_dir') and args.transcript_dir:
+                has_transcript = True  # Assume local transcript might exist
+            elif episode and episode.transcript_url:
+                has_transcript = True
+
+            if has_transcript:
+                logger.info(f"[DRY RUN] Would add transcript to: {title}")
+                if episode and episode.transcript_url:
+                    logger.info(f"  Transcript URL: {episode.transcript_url}")
+                    logger.info(f"  Transcript type: {episode.transcript_type}")
+                if hasattr(args, 'transcript_dir') and args.transcript_dir:
+                    logger.info(f"  Local transcript dir: {args.transcript_dir}")
+                updated += 1
+            else:
+                logger.debug(f"No transcript available for: {title}")
+                skipped += 1
             continue
 
         # Fetch current Ghost post to check for existing transcript
         try:
-            current_post = client.get_post(ghost_post_id)
+            current_post = client.get_post_with_lexical(ghost_post_id)
             current_html = current_post.get("html", "")
+            lexical_str = current_post.get("lexical", "")
             updated_at = current_post.get("updated_at")
 
             if not updated_at:
@@ -1263,38 +1275,82 @@ def cmd_update_transcripts(args: argparse.Namespace) -> int:
                 failed += 1
                 continue
 
-            # Skip if transcript already present in post
-            if 'id="episode-transcript"' in current_html:
+            # Skip if transcript already present in post (check both HTML and Lexical)
+            if 'id="episode-transcript"' in current_html or 'episode-transcript' in lexical_str:
                 logger.info(f"Transcript already present: {title}")
                 tracker.record_transcript_synced(guid)
                 skipped += 1
                 continue
 
-            # Fetch and format transcript from RSS
-            raw = fetch_rss_transcript(episode.transcript_url, episode.transcript_type)
-            if not raw:
-                logger.warning(f"Failed to fetch transcript for: {title}")
-                skipped += 1
-                continue
+            # Try local transcript first (if --transcript-dir provided)
+            transcript_html = None
+            if hasattr(args, 'transcript_dir') and args.transcript_dir:
+                local_transcript = load_wc_transcript(title, Path(args.transcript_dir))
+                if local_transcript:
+                    logger.info(f"Found local transcript for: {title}")
+                    transcript_html = format_transcript_html(local_transcript)
 
-            transcript_html = format_rss_transcript_html(raw, episode.transcript_type)
+            # Fall back to RSS fetch if no local transcript
             if not transcript_html:
-                logger.warning(f"Empty transcript after formatting: {title}")
-                skipped += 1
-                continue
+                if not episode or not episode.transcript_url:
+                    logger.debug(f"No transcript URL for: {title}")
+                    skipped += 1
+                    continue
 
-            # Append transcript section to existing post HTML
+                raw = fetch_rss_transcript(episode.transcript_url, episode.transcript_type)
+                if not raw:
+                    logger.warning(f"Failed to fetch transcript for: {title}")
+                    skipped += 1
+                    continue
+
+                transcript_html = format_rss_transcript_html(raw, episode.transcript_type)
+                if not transcript_html:
+                    logger.warning(f"Empty transcript after formatting: {title}")
+                    skipped += 1
+                    continue
+
+            # Append transcript section to post
             transcript_section = build_transcript_section_html(transcript_html)
-            new_html = current_html + "\n" + transcript_section
 
-            # Update the Ghost post
-            update_post = GhostPost(
-                title=current_post.get("title", title),
-                html=new_html,
-            )
-            client.update_post(ghost_post_id, update_post, updated_at)
+            # Check if this is a Lexical post
+            if lexical_str:
+                # Lexical post: append as HTML card node
+                try:
+                    lexical_data = json_module.loads(lexical_str)
+
+                    # Create transcript HTML card node
+                    transcript_node = {
+                        "type": "html",
+                        "version": 1,
+                        "html": transcript_section,
+                        "visibility": VISIBILITY_WEB_ONLY,
+                    }
+
+                    # Append to root.children
+                    lexical_data["root"]["children"].append(transcript_node)
+
+                    # Update via Lexical API (serialize dict back to JSON string)
+                    client.update_post_lexical(
+                        ghost_post_id,
+                        lexical=json_module.dumps(lexical_data),
+                        updated_at=updated_at
+                    )
+                    logger.info(f"Added transcript to Lexical post: {title}")
+                except (json_module.JSONDecodeError, KeyError) as e:
+                    logger.error(f"Failed to parse Lexical data for '{title}': {e}")
+                    failed += 1
+                    continue
+            else:
+                # HTML-only post: append to HTML field
+                new_html = current_html + "\n" + transcript_section
+                update_post = GhostPost(
+                    title=current_post.get("title", title),
+                    html=new_html,
+                )
+                client.update_post(ghost_post_id, update_post, updated_at)
+                logger.info(f"Added transcript to HTML post: {title}")
+
             tracker.record_transcript_synced(guid)
-            logger.info(f"Added transcript to: {title}")
             updated += 1
 
         except GhostAPIError as e:
@@ -1478,6 +1534,10 @@ def main(argv: Optional[list[str]] = None) -> int:
     transcript_parser.add_argument(
         "--feed-url",
         help="Override feed URL (default: Luminous feed)",
+    )
+    transcript_parser.add_argument(
+        "--transcript-dir",
+        help="Directory containing local transcript files (uses load_wc_transcript for discovery)",
     )
     transcript_parser.set_defaults(func=cmd_update_transcripts)
 

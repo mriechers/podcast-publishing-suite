@@ -109,7 +109,7 @@ Workspace-wide commit validator at:
 #### ✅ Workspace Manifest
 - Listed in `/Users/mriechers/Developer/workspace_ops/config/forerunner_repos.json`
 - Status: "active"
-- Remote: git@github.com:MarkOnFire/gai-project-template.git
+- Remote: git@github.com:mriechers/gai-project-template.git
 
 #### ✅ Commits
 - Recent commits follow format with `[Agent: <name>]`
