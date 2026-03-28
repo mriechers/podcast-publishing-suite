@@ -354,13 +354,37 @@ _LEXICAL_WEB_ONLY_MARKERS = ["wc-audio-player", "episode-transcript"]
 _LEXICAL_EMAIL_ONLY_MARKERS = ["wc-email-cta"]
 
 
-def process_lexical_visibility(lexical_str: str) -> str:
-    """Apply visibility controls to Lexical JSON nodes.
+def _is_timestamp_node(child: dict) -> bool:
+    """Check if a Lexical node is a chapter timestamp block.
 
-    Walks the Lexical root children and sets visibility based on content markers:
-    - Audio player (wc-audio-player): web-only
-    - Email CTA (wc-email-cta): email-only
-    - Transcript (episode-transcript): web-only
+    Detects paragraph nodes where all text children are HH:MM:SS timestamps,
+    separated by linebreaks. These slip through HTML-level stripping when
+    the API returns chapters as newline-separated text in a single paragraph.
+    """
+    import re
+    timestamp_re = re.compile(r'^\d{2}:\d{2}:\d{2}\s+')
+    text_children = [
+        c for c in child.get("children", [])
+        if c.get("type") not in ("linebreak",)
+    ]
+    if not text_children:
+        return False
+    return all(
+        timestamp_re.match(c.get("text", ""))
+        for c in text_children
+        if c.get("text")
+    ) and any(c.get("text") for c in text_children)
+
+
+def process_lexical_visibility(lexical_str: str) -> str:
+    """Apply visibility controls and cleanup to Lexical JSON nodes.
+
+    Walks the Lexical root children and:
+    1. Removes chapter timestamp nodes that slipped through HTML stripping
+    2. Sets visibility based on content markers:
+       - Audio player (wc-audio-player): web-only
+       - Email CTA (wc-email-cta): email-only
+       - Transcript (episode-transcript): web-only
 
     Args:
         lexical_str: Raw Lexical JSON string from Ghost.
@@ -370,6 +394,9 @@ def process_lexical_visibility(lexical_str: str) -> str:
     """
     lexical = json.loads(lexical_str)
     children = lexical.get("root", {}).get("children", [])
+
+    # Remove chapter timestamp nodes
+    children[:] = [c for c in children if not _is_timestamp_node(c)]
 
     for child in children:
         child_html = child.get("html", "")
