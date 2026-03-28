@@ -35,6 +35,7 @@ SAFE_HTML_ATTRIBUTES = {
     "a": {"href", "title", "target"},
     "div": {"class", "id"},
     "span": {"class"},
+    "ul": {"class"},
 }
 
 
