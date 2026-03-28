@@ -97,7 +97,7 @@ def generate_peaks_json(
     audio_path: Path,
     output_path: Path,
     pixels_per_second: int = 20,
-    bits: int = 8,
+    bits: int = 16,
 ) -> None:
     """Generate waveform peaks JSON using audiowaveform CLI.
 

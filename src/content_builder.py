@@ -860,10 +860,12 @@ def build_transcript_section_html(transcript_html: str) -> str:
         Complete Ghost HTML card with transcript section.
     """
     return (
-        '<div class="episode-transcript">'
-        '<h3>Transcript</h3>'
-        f'{transcript_html}'
-        '</div>'
+        '<!--kg-card-begin: html-->\n'
+        '<div id="episode-transcript" class="episode-transcript">\n'
+        '<h2>Transcript</h2>\n'
+        f'{transcript_html}\n'
+        '</div>\n'
+        '<!--kg-card-end: html-->'
     )
 
 
@@ -1265,7 +1267,6 @@ def build_post_html(
     if episode.description:
         description = strip_boilerplate(episode.description, feed_type)
         description = sanitize_html(description)
-        description = format_episode_links(description)
         sections.append(description)
 
     # Transcript section (from RSS <podcast:transcript>)
