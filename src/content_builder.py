@@ -1295,6 +1295,14 @@ def build_post_html(
     if episode.description:
         description = strip_boilerplate(episode.description, feed_type)
         description = sanitize_html(description)
+        # Wrap styled link lists in Ghost HTML card markers so they're
+        # preserved as raw HTML in Lexical (not converted to native list nodes)
+        description = re.sub(
+            r'(<ul class="wc-episode-notes-content-links">.*?</ul>)',
+            r'<!--kg-card-begin: html-->\n\1\n<!--kg-card-end: html-->',
+            description,
+            flags=re.DOTALL,
+        )
         sections.append(description)
 
     # Transcript section (from RSS <podcast:transcript>)
