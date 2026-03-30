@@ -191,12 +191,13 @@ WC_SUBSCRIPTION_REMINDER = r'''<p>[^<]*keep your subscription active[^<]*</p>'''
 # Dash dividers: <p>--</p> or <p>---</p> (with optional whitespace)
 WC_DASH_DIVIDER = r'''<p>\s*-{2,}\s*</p>'''
 
-# Single emdash divider: <p>—</p> (Unicode em dash, not ASCII dashes)
-WC_EMDASH_DIVIDER = r'''<p>\s*[—\u2014]\s*</p>'''
+# Emdash divider: <p>—</p> or <p>——</p> (with optional NBSP padding)
+WC_EMDASH_DIVIDER = r'''<p>[\s\u00a0]*[—\u2014]{1,3}[\s\u00a0]*</p>'''
 
 # Chapters block format 1: a <p>Chapters:</p> heading followed by timestamped lines with <br>
 # Matches: <p>Chapters:</p><p>00:00:00 Title<br>00:04:34 Title<br>...</p>
-WC_CHAPTERS_BLOCK = r'''<p>\s*Chapters:\s*</p>\s*<p>\s*(?:\d{2}:\d{2}:\d{2}\s+[^<]+(?:<br\s*/?>?\s*)?)+\s*</p>'''
+# Resilient to nh3 whitespace normalization (newlines, optional colon, MM:SS or HH:MM:SS)
+WC_CHAPTERS_BLOCK = r'''<p>\s*Chapters:?\s*</p>\s*<p>\s*(?:\d{1,2}:\d{2}(?::\d{2})?\s+[^<]+(?:<br\s*/?>?\s*|\s*))+\s*</p>'''
 
 # Chapters format 2: Individual <p> tags for each timestamp (no Chapters: heading)
 # Matches consecutive: <p>00:00:00 Title</p><p>00:04:10 Title</p>...

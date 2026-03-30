@@ -8,15 +8,18 @@ from datetime import datetime
 import pytest
 
 from src.content_builder import (
+    build_episode_meta_html,
     build_ghost_post,
     build_jsonld_metadata,
     build_luminous_ghost_post,
     build_podlink_url,
+    build_tags,
     build_transcript_section_html,
     format_episode_links,
     format_rss_transcript_html,
     format_transcript_html,
     get_apple_id_from_guid,
+    load_wc_transcript,
     sanitize_html,
 )
 from src.feed_parser import Episode
@@ -309,3 +312,75 @@ def sample_episode() -> Episode:
         episode_type="full",
         author="Wisconsin Public Radio",
     )
+
+
+class TestLoadWcTranscript:
+    """Tests for load_wc_transcript file discovery."""
+
+    def test_finds_formatted_transcript_md(self, tmp_path):
+        (tmp_path / "formatted_transcript.md").write_text("**Anne:** Hello")
+        result = load_wc_transcript("Test Episode", tmp_path)
+        assert result == "**Anne:** Hello"
+
+    def test_finds_plain_transcript_txt(self, tmp_path):
+        (tmp_path / "transcript.txt").write_text("Hello world")
+        result = load_wc_transcript("Test Episode", tmp_path)
+        assert result == "Hello world"
+
+    def test_finds_suffixed_transcript_txt(self, tmp_path):
+        (tmp_path / "WC_002_Rovelli_transcript.txt").write_text("Physics is beautiful")
+        result = load_wc_transcript("Carlo Rovelli: Physics", tmp_path)
+        assert result == "Physics is beautiful"
+
+    def test_prefers_formatted_over_suffixed(self, tmp_path):
+        (tmp_path / "formatted_transcript.md").write_text("**Anne:** Formatted")
+        (tmp_path / "WC_002_Rovelli_transcript.txt").write_text("Raw text")
+        result = load_wc_transcript("Carlo Rovelli: Physics", tmp_path)
+        assert result == "**Anne:** Formatted"
+
+    def test_returns_none_for_empty_dir(self, tmp_path):
+        result = load_wc_transcript("Nobody: Nothing", tmp_path)
+        assert result is None
+
+
+class TestTtbookReferences:
+    """Ensure no TTBOOK references appear in generated HTML or tags."""
+
+    def test_episode_meta_html_no_ttbook(self):
+        html = build_episode_meta_html("https://example.com/episode")
+        assert "TTBOOK" not in html
+        assert "ttbook" not in html.lower()
+
+    def test_build_tags_default_not_ttbook(self, sample_episode):
+        tags = build_tags(sample_episode)
+        tag_names = [t["name"] for t in tags]
+        assert "TTBOOK" not in tag_names
+
+
+class TestPublishedAtHandling:
+    """published_at should be set for past episodes, None for future."""
+
+    @staticmethod
+    def _make_episode(pub_date):
+        return Episode(
+            title="Test Episode", guid="test-guid",
+            link="https://example.com", description="Test",
+            subtitle="", enclosure_url="https://example.com/audio.mp3",
+            enclosure_type="audio/mpeg", duration="30:00",
+            image_url="https://example.com/img.jpg",
+            pub_date=pub_date, categories=[],
+        )
+
+    def test_past_episode_gets_published_at(self):
+        from datetime import timezone
+        ep = self._make_episode(datetime(2025, 6, 15, 10, 0, tzinfo=timezone.utc))
+        post = build_ghost_post(ep, primary_tag="Wonder Cabinet")
+        assert post.published_at is not None
+        assert "2025-06-15" in post.published_at
+
+    def test_future_episode_gets_none(self):
+        from datetime import timezone, timedelta
+        future_date = datetime.now(timezone.utc) + timedelta(days=30)
+        ep = self._make_episode(future_date)
+        post = build_ghost_post(ep, primary_tag="Wonder Cabinet")
+        assert post.published_at is None

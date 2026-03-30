@@ -8,7 +8,7 @@ import json
 import logging
 import re
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -561,6 +561,11 @@ def load_wc_transcript(episode_title: str, transcript_dir: Optional[Path] = None
     if canonical.exists():
         logger.info(f"Found canonical transcript: {canonical}")
         return canonical.read_text()
+
+    # Fallback: glob for *_transcript.txt (whisper pipeline naming convention)
+    for f in sorted(transcript_dir.glob('*_transcript.txt')):
+        logger.info(f"Found suffixed transcript: {f}")
+        return f.read_text()
 
     # Extract a key name from the title for matching
     # E.g., "Sophie Strand: Ecological Storytelling..." -> "Sophie Strand"
@@ -1170,7 +1175,7 @@ def build_luminous_ghost_post(
         title=title,
         html=html_content,
         status=status,
-        published_at=None,  # Let Ghost use import time (PRX dates can be in the future)
+        published_at=format_published_at(episode) if episode.pub_date.replace(tzinfo=episode.pub_date.tzinfo or timezone.utc) <= datetime.now(timezone.utc) else None,
         feature_image=ghost_image_url or episode.image_url,  # Prefer Ghost-hosted
         custom_excerpt=excerpt,  # From itunes:subtitle
         canonical_url=canonical_url,
@@ -1239,7 +1244,7 @@ def build_episode_meta_html(link: str) -> str:
     safe_link = html.escape(link, quote=True)
 
     return f'''<div class="episode-meta">
-  <p><a href="{safe_link}">Listen on TTBOOK.org</a></p>
+  <p><a href="{safe_link}">View episode on PRX</a></p>
 </div>'''
 
 
@@ -1319,7 +1324,7 @@ PUBLIC_SHOW_TAGS = {"Wonder Cabinet", "Luminous"}
 
 def build_tags(
     episode: Episode,
-    primary_tag: str = "TTBOOK",
+    primary_tag: str = "Wonder Cabinet",
 ) -> list[dict]:
     """Build Ghost tags array with show tag (public) and category tags (internal).
 
@@ -1453,7 +1458,7 @@ def build_ghost_post(
         title=episode.title,
         html=html_content,
         status=status,
-        published_at=None,  # Let Ghost use import time (PRX dates can be in the future)
+        published_at=format_published_at(episode) if episode.pub_date.replace(tzinfo=episode.pub_date.tzinfo or timezone.utc) <= datetime.now(timezone.utc) else None,
         feature_image=ghost_image_url or episode.image_url or None,  # Prefer Ghost-hosted
         custom_excerpt=excerpt if excerpt else None,
         canonical_url=canonical_url,
