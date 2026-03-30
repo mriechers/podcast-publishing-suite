@@ -148,20 +148,29 @@ def validate_episode(
     else:
         results.append((False, "Missing: raw_transcripts/ subfolder"))
 
-    # Upload manifest (optional)
-    manifest = episode_dir / "upload_manifest.json"
+    # Episode manifest (optional)
+    manifest = episode_dir / "manifest.json"
     if manifest.exists():
         try:
             data = json.loads(manifest.read_text())
-            failed = [f for f in data.get("files", []) if f.get("status") == "failed"]
-            if failed:
+            files = data.get("files", {})
+            if isinstance(files, dict):
+                # Canonical schema: files.{key}.status
+                failed_files = [k for k, v in files.items()
+                                if isinstance(v, dict) and v.get("status") == "failed"]
+            else:
+                # Legacy array schema
+                failed_files = [f for f in files if isinstance(f, dict) and f.get("status") == "failed"]
+
+            if failed_files:
                 results.append(
-                    (False, f"Upload manifest: {len(failed)} files failed upload")
+                    (False, f"Manifest: {len(failed_files)} files failed ({', '.join(str(f) for f in failed_files)})")
                 )
             else:
-                results.append((True, "Upload manifest: all files uploaded"))
+                stage = data.get("stage", "unknown")
+                results.append((True, f"Manifest: stage={stage}, all files OK"))
         except (json.JSONDecodeError, KeyError):
-            results.append((False, "Upload manifest: invalid JSON"))
+            results.append((False, "Manifest: invalid JSON"))
 
     exit_code = 0 if all(ok for ok, _ in results) else 1
     return results, exit_code
