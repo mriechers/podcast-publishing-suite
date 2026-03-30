@@ -472,6 +472,54 @@ class GhostClient:
 
         return posts[0]
 
+    def update_post_metadata(
+        self,
+        post_id: str,
+        updated_at: str,
+        tags: list[dict] | None = None,
+        codeinjection_head: str | None = None,
+        canonical_url: str | None = None,
+    ) -> dict:
+        """Update only non-content metadata fields on a post.
+
+        Unlike update_post(), this does NOT send html or source=html,
+        so it is safe for Lexical posts — content is not touched.
+
+        Args:
+            post_id: Ghost post ID.
+            updated_at: Current updated_at timestamp from the post.
+            tags: Optional new tags list.
+            codeinjection_head: Optional new code injection.
+            canonical_url: Optional new canonical URL.
+
+        Returns:
+            Updated post data from API response.
+        """
+        url = f"{self.api_url}/posts/{post_id}/"
+
+        post_data: dict[str, Any] = {"updated_at": updated_at}
+        if tags is not None:
+            post_data["tags"] = tags
+        if codeinjection_head is not None:
+            post_data["codeinjection_head"] = codeinjection_head
+        if canonical_url is not None:
+            post_data["canonical_url"] = canonical_url
+
+        payload = {"posts": [post_data]}
+
+        logger.info(f"Updating post metadata: {post_id}")
+        logger.debug(f"PUT {url}")
+
+        response = self._request_with_retry(
+            "PUT", url, json=payload, headers=self._get_headers(), timeout=30,
+        )
+
+        result = self._handle_response(response)
+        posts = result.get("posts", [])
+        if not posts:
+            raise GhostAPIError("No post returned in response")
+        return posts[0]
+
     def _upload_to_endpoint(
         self, file_path: Path, endpoint: str, content_type: str, timeout: int = 300
     ) -> str:

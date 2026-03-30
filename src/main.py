@@ -1130,18 +1130,15 @@ def cmd_update_metadata(args: argparse.Namespace) -> int:
             else:
                 canonical_url = episode.link  # Fallback
 
-            # Create minimal update post (only changing tags, codeinjection_head, and canonical_url)
-            # We need to preserve the existing content
-            update_post = GhostPost(
-                title=current_post.get("title", title),
-                html=current_post.get("html", ""),
+            # Safe metadata-only update — no html, no source=html
+            # Preserves Lexical content and visibility controls
+            result = client.update_post_metadata(
+                ghost_post_id,
+                updated_at=updated_at,
                 tags=new_tags,
                 codeinjection_head=jsonld,
                 canonical_url=canonical_url,
             )
-
-            # Update the post
-            result = client.update_post(ghost_post_id, update_post, updated_at)
             logger.info(f"Updated: {title}")
             updated += 1
 
