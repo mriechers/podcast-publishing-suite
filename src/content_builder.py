@@ -1373,7 +1373,8 @@ def format_published_at(episode: Episode) -> str:
     Returns:
         ISO 8601 formatted date string.
     """
-    return episode.pub_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    utc_date = episode.pub_date.astimezone(timezone.utc)
+    return utc_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")
 
 
 def build_ghost_post(

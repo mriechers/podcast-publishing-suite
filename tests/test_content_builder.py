@@ -384,3 +384,12 @@ class TestPublishedAtHandling:
         ep = self._make_episode(future_date)
         post = build_ghost_post(ep, primary_tag="Wonder Cabinet")
         assert post.published_at is None
+
+    def test_non_utc_timezone_converted_correctly(self):
+        """A non-UTC pub_date must be converted to UTC before formatting."""
+        from datetime import timezone, timedelta
+        edt = timezone(timedelta(hours=-4))
+        # 14:30 EDT = 18:30 UTC
+        ep = self._make_episode(datetime(2025, 7, 8, 14, 30, 0, tzinfo=edt))
+        post = build_ghost_post(ep, primary_tag="Wonder Cabinet")
+        assert post.published_at == "2025-07-08T18:30:00.000Z"
