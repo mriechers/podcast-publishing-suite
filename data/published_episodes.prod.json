@@ -125,7 +125,43 @@
     "prx_writeback_done": false,
     "ghost_slug": "robert-macfarlane-the-soul-of-rivers-and-the-rights-of-nature"
   },
+  "prx_120_6f754c1c-3871-4219-978f-896cb11797be": {
+    "ghost_post_id": "69c75a545c589800013c352e",
+    "title": "David George Haskell: Flowers and the Revolutionary Power of Beauty",
+    "published_at": "2026-03-28T11:00:00.000Z",
+    "synced_at": "2026-03-27T23:34:30.267516",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": false,
+    "ghost_slug": "david-george-haskell-flowers-and-the-revolutionary-power-of-beauty-2"
+  },
+  "prx_120_d9b8a095-09b9-4a43-82ad-1262440c5031": {
+    "ghost_post_id": "69d063f9d893830001787e05",
+    "title": "Manvir Singh: Was Shamanism the First Religion?",
+    "published_at": "2026-04-04T11:00:00.000Z",
+    "synced_at": "2026-04-03T20:06:02.954752",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": false,
+    "ghost_slug": "manvir-singh-was-shamanism-the-first-religion"
+  },
   "_metadata": {
-    "last_sync_time": "2026-03-06T19:13:32.821147"
+    "last_sync_time": "2026-04-03T20:05:30.173988"
   }
 }
