@@ -98,15 +98,23 @@ def validate_episode(
 
     # Build expected file patterns
     if episode_num and guest_name:
-        expected_srt = f"{episode_num} - {guest_name}.srt"
         expected_transcript = "formatted_transcript.md"
         expected_chapters = "chapters.md"
 
-        # Combined SRT
-        ok, msg = check_file(episode_dir / expected_srt, "Combined SRT")
+        # Combined SRT — check canonical name first, then legacy naming
+        canonical_srt = episode_dir / "captions.srt"
+        legacy_srt = episode_dir / f"{episode_num} - {guest_name}.srt"
+        if canonical_srt.exists():
+            srt_path = canonical_srt
+        elif legacy_srt.exists():
+            srt_path = legacy_srt
+        else:
+            srt_path = canonical_srt  # will report as missing
+
+        ok, msg = check_file(srt_path, "Combined SRT")
         results.append((ok, msg))
         if ok:
-            srt_issues = validate_srt(episode_dir / expected_srt)
+            srt_issues = validate_srt(srt_path)
             for issue in srt_issues:
                 results.append((False, f"  SRT issue: {issue}"))
 
@@ -140,13 +148,15 @@ def validate_episode(
             (md_count > 0, f"Markdown files: {md_count} found")
         )
 
-    # Raw transcripts subfolder
-    raw_dir = episode_dir / "raw_transcripts"
+    # Raw transcripts subfolder — check both canonical (whisper/raw_transcripts/) and legacy (raw_transcripts/)
+    raw_dir = episode_dir / "whisper" / "raw_transcripts"
+    if not raw_dir.is_dir():
+        raw_dir = episode_dir / "raw_transcripts"
     if raw_dir.is_dir():
         raw_srts = list(raw_dir.glob("*.srt"))
-        results.append((len(raw_srts) > 0, f"Found: raw_transcripts/ ({len(raw_srts)} SRTs)"))
+        results.append((len(raw_srts) > 0, f"Found: {raw_dir.relative_to(episode_dir)}/ ({len(raw_srts)} SRTs)"))
     else:
-        results.append((False, "Missing: raw_transcripts/ subfolder"))
+        results.append((False, "Missing: raw_transcripts/ subfolder (checked whisper/raw_transcripts/ and raw_transcripts/)"))
 
     # Episode manifest (optional)
     manifest = episode_dir / "manifest.json"

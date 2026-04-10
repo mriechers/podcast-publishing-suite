@@ -106,6 +106,7 @@ Follow Apple Podcasts best practices:
 - Only generate chapters for episodes **longer than 10 minutes**
 - Each chapter should be **at least 2 minutes** long
 - If a mid-roll ad break exists, do NOT create a chapter for it -- place the chapter at the content that follows the break
+- **Mid-roll verification**: Before finalizing, read the SRT content at each post-break chapter timestamp to confirm it lands on actual episode content, NOT on the mid-roll promo or re-intro. The mid-roll typically includes a promo from Anne followed by Steve's "You're listening to Wonder Cabinet" re-intro. The chapter should start ~10-15 seconds after the re-intro ends, at the first substantive question or statement.
 
 ## Quality Checklist
 
