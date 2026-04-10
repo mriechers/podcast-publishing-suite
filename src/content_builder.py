@@ -802,12 +802,21 @@ def format_rss_transcript_html(raw_content: str, content_type: str) -> str:
     if "- [" in raw_content:
         return format_transcript_html(raw_content)
 
-    # Plain text: wrap paragraphs in <p> tags
+    # Plain text: detect speaker attribution and wrap paragraphs
+    # Check for "Speaker Name: dialogue" pattern (2-4 capitalized words before colon)
+    speaker_line_pattern = re.compile(r'^([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,3}):\s+(.+)', re.DOTALL)
     paragraphs = raw_content.strip().split("\n\n")
     html_parts = []
     for para in paragraphs:
         text = para.strip()
-        if text:
+        if not text:
+            continue
+        m = speaker_line_pattern.match(text)
+        if m:
+            speaker = html.escape(m.group(1))
+            dialogue = html.escape(m.group(2))
+            html_parts.append(f"<p><strong>{speaker}:</strong> {dialogue}</p>")
+        else:
             html_parts.append(f"<p>{html.escape(text)}</p>")
     return "\n".join(html_parts)
 
@@ -966,7 +975,7 @@ def build_jsonld_metadata(
         else:
             canonical_url = f"{base}/{post_slug}/"
     else:
-        canonical_url = episode.link  # Fallback to RSS link
+        canonical_url = episode.link  # Fallback to RSS link until Ghost URL is set
 
     # Only include keywords if there are actual categories
     keywords = episode.categories if episode.categories else None
@@ -1169,7 +1178,7 @@ def build_luminous_ghost_post(
     if ghost_url and post_slug:
         canonical_url = f"{ghost_url.rstrip('/')}/luminous/{post_slug}/"
     else:
-        canonical_url = episode.link  # Fallback to ttbook.org
+        canonical_url = None  # Don't fall back to PRX — let Ghost use its own URL
 
     return GhostPost(
         title=title,
@@ -1445,7 +1454,7 @@ def build_ghost_post(
     # Build the post
     authors = FEED_AUTHORS.get(feed_type, [])
 
-    # Build canonical URL: prefer Ghost site URL if available
+    # Build canonical URL: prefer Ghost site URL, fall back to PRX link
     if ghost_url and post_slug:
         base = ghost_url.rstrip('/')
         if url_prefix:

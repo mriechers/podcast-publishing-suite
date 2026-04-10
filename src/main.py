@@ -854,6 +854,67 @@ def cmd_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_clear_episode(args: argparse.Namespace) -> int:
+    """Handle the clear-episode command.
+
+    Removes a specific episode from the state tracker by GUID or title match.
+
+    Returns:
+        Exit code (0 for success, 1 for failure).
+    """
+    try:
+        config = get_config(env_name=args.env)
+    except ConfigError as e:
+        logger.error(f"Configuration error: {e}")
+        return 1
+
+    tracker = StateTracker(config.state_file)
+
+    # Find the episode by GUID or title
+    guid_to_remove = args.guid
+    if not guid_to_remove and args.title:
+        search = args.title.lower()
+        episodes = tracker.get_all_published()
+        matches = [
+            (guid, ep) for guid, ep in episodes.items()
+            if search in ep.title.lower()
+        ]
+        if not matches:
+            print(f"No episode found matching title: {args.title}")
+            return 1
+        if len(matches) > 1:
+            print(f"Multiple episodes match '{args.title}':")
+            for guid, ep in matches:
+                print(f"  {guid} — {ep.title}")
+            print("\nUse --guid to specify exactly which one to clear.")
+            return 1
+        guid_to_remove = matches[0][0]
+        print(f"Matched: {matches[0][1].title}")
+
+    if not guid_to_remove:
+        print("Provide --guid or --title to identify the episode.")
+        return 1
+
+    # Show what we're about to remove
+    ep = tracker.get_episode(guid_to_remove)
+    if not ep:
+        print(f"No episode found with GUID: {guid_to_remove}")
+        return 1
+
+    print(f"Clearing: {ep.title}")
+    print(f"  GUID: {guid_to_remove}")
+    print(f"  Ghost post ID: {ep.ghost_post_id}")
+    print(f"  Status: {ep.status}")
+
+    if tracker.remove(guid_to_remove):
+        print("Episode cleared from state tracker.")
+    else:
+        print("Failed to clear episode.")
+        return 1
+
+    return 0
+
+
 def cmd_clear_failures(args: argparse.Namespace) -> int:
     """Handle the clear-failures command.
 
@@ -1470,6 +1531,21 @@ def main(argv: Optional[list[str]] = None) -> int:
         help="List tracked episodes",
     )
     list_parser.set_defaults(func=cmd_list)
+
+    # clear-episode command
+    clear_ep_parser = subparsers.add_parser(
+        "clear-episode",
+        help="Remove a specific episode from the state tracker (for re-import)",
+    )
+    clear_ep_parser.add_argument(
+        "--guid",
+        help="Episode GUID to clear (e.g., prx_120_<guid>)",
+    )
+    clear_ep_parser.add_argument(
+        "--title",
+        help="Search by title substring (case-insensitive)",
+    )
+    clear_ep_parser.set_defaults(func=cmd_clear_episode)
 
     # clear-failures command
     clear_parser = subparsers.add_parser(

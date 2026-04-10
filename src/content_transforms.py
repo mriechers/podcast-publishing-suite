@@ -191,8 +191,9 @@ WC_SUBSCRIPTION_REMINDER = r'''<p>[^<]*keep your subscription active[^<]*</p>'''
 # Dash dividers: <p>--</p> or <p>---</p> (with optional whitespace)
 WC_DASH_DIVIDER = r'''<p>\s*-{2,}\s*</p>'''
 
-# Emdash divider: <p>—</p> or <p>——</p> (with optional NBSP padding)
-WC_EMDASH_DIVIDER = r'''<p>[\s\u00a0]*[—\u2014]{1,3}[\s\u00a0]*</p>'''
+# Emdash/endash divider: <p>—</p>, <p>–</p>, <p>&mdash;</p>, etc.
+# Handles Unicode em/en dashes, HTML entities, and optional NBSP padding
+WC_EMDASH_DIVIDER = r'''<p>[\s\u00a0]*(?:[—\u2014–\u2013]|&[mn]dash;|&#821[23];|&#x201[34];){1,3}[\s\u00a0]*</p>'''
 
 # Chapters block format 1: a <p>Chapters:</p> heading followed by timestamped lines with <br>
 # Matches: <p>Chapters:</p><p>00:00:00 Title<br>00:04:34 Title<br>...</p>
@@ -207,6 +208,11 @@ WC_TIMESTAMP_PARAGRAPHS = r'''(?:<p>\s*\d{2}:\d{2}:\d{2}\s+[^<]+</p>\s*){2,}'''
 # Chapters format 3: MM:SS timestamps (shorter format without hours)
 # Matches: <p>0:00 — Title</p> or <p>4:34 - Title</p>
 WC_SHORT_TIMESTAMP_PARAGRAPHS = r'''(?:<p>\s*\d{1,2}:\d{2}\s*[—–\-]\s*.+?</p>\s*){2,}'''
+
+# Chapters format 4: <br>-separated timestamps inside a single <p> (no heading)
+# Matches: <p>0:00 Title<br>4:35 Title<br>8:30 Title</p>
+# PRX formats timestamps as <br>-separated lines within one paragraph
+WC_BR_TIMESTAMPS = r'''<p>\s*(?:\d{1,2}:\d{2}(?::\d{2})?\s+[^<]+<br\s*/?>?\s*){2,}\d{1,2}:\d{2}(?::\d{2})?\s+[^<]+\s*</p>'''
 
 # "Hosted by" closing line - remove the standard show credits
 # e.g., '<p><em>Wonder Cabinet</em> is hosted by Anne Strainchamps and Steve Paulson.</p>'
@@ -299,6 +305,13 @@ TTBOOK_CONFIG = FeedTransformConfig(
             pattern=WC_SHORT_TIMESTAMP_PARAGRAPHS,
             marker_id="wc_short_timestamps",
             description="Removes consecutive MM:SS timestamp paragraphs"
+        ),
+        # Strip <br>-separated timestamps in a single paragraph
+        RemovalRule(
+            name="wc_br_timestamps",
+            pattern=WC_BR_TIMESTAMPS,
+            marker_id="wc_br_timestamps",
+            description="Removes <br>-separated timestamps within a single <p>"
         ),
         # Strip dash dividers (-- or ---)
         RemovalRule(

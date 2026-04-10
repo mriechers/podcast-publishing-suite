@@ -115,13 +115,14 @@ def _parse_podcast_ids(env_value: str, json_value: list[str]) -> list[str]:
     return json_value or []
 
 
-def get_config(reload: bool = False, env_name: str = "dev") -> Config:
+def get_config(env_name: str = "dev", *, reload: bool = False) -> Config:
     """Get the application configuration singleton.
 
     Args:
-        reload: If True, reload configuration from disk even if already loaded.
         env_name: Environment name ('dev' or 'prod'). Determines which .env
                   file and state file to use.
+        reload: If True, reload configuration from disk even if already loaded.
+                Keyword-only to prevent positional misuse.
 
     Returns:
         Config instance with validated settings.
@@ -201,7 +202,7 @@ def get_config(reload: bool = False, env_name: str = "dev") -> Config:
             "PRX_ID_BASE_URL",
             prx_config.get("id_base_url", "https://id.prx.org")
         ),
-        use_dovetail_api=os.getenv("PRX_USE_API", "false").lower() in ("true", "1", "yes"),
+        use_dovetail_api=os.getenv("PRX_USE_API", "true").lower() in ("true", "1", "yes"),
     )
 
     # Enforce HTTPS in production (JWT tokens sent in cleartext over HTTP)
