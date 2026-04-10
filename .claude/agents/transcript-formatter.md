@@ -95,11 +95,7 @@ The output MUST follow this exact structure. Do NOT deviate from these conventio
 - Remove filler words ("um", "uh", "you know") unless they add character or authenticity
 - Fix obvious transcription errors (wrong words, missing words)
 - Preserve regional dialect or speaking style when it's part of the content's character
-- **Known Whisper errors for Wonder Cabinet** — always apply these corrections:
-  - "Versher" or "Vershire" → **Vershire** (Vermont town name — never "Brattleboro")
-  - "Anne Strange-Hamps" or "Anne Strain-Champs" → **Anne Strainchamps**
-  - "Gottscher" → **Steve Gotcher** (audio engineer)
-  - "Rickers" → **Mark Riechers** (digital mastermind)
+- **Known Whisper errors** — before formatting, read the show's glossary file at `shows/<show-slug>/glossary.json` (relative to the podcast-publishing-suite root). Apply all corrections from the `corrections` object: keys are Whisper misrenderings, values are correct spellings. Also use the `hosts` and `recurring` arrays to verify name spellings throughout.
 
 ### Timecodes
 

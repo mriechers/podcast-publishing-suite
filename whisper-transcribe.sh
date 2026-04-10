@@ -439,8 +439,13 @@ main() {
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo -e "${BOLD}Batch Complete${NC}"
         echo -e "  ${GREEN}✓ Processed:${NC} $SUCCESS"
-        [[ $SKIPPED -gt 0 ]] && echo -e "  ${YELLOW}⊘ Skipped:${NC}   $SKIPPED (already existed)"
-        [[ $FAILED -gt 0 ]] && echo -e "  ${RED}✗ Failed:${NC}    $FAILED"
+        if [[ $SKIPPED -gt 0 ]]; then
+            echo -e "  ${YELLOW}⊘ Skipped:${NC}   $SKIPPED (already existed)"
+        fi
+        if [[ $FAILED -gt 0 ]]; then
+            echo -e "  ${RED}✗ Failed:${NC}    $FAILED"
+            exit 1
+        fi
 
     # Handle single file
     elif [[ -f "$INPUT_PATH" ]]; then
