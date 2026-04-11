@@ -59,6 +59,7 @@ from .dovetail_client import DovetailClient, DovetailAPIError
 from .ghost_client import GhostAPIError, GhostClient, GhostPost
 from .og_image import download_image, generate_og_image
 from .state_tracker import StateLockError, StateTracker
+from .notifications import MarkbotNotifier
 
 # Exit codes for CI/CD differentiation
 EXIT_SUCCESS = 0
@@ -196,6 +197,7 @@ def sync_episodes(
     dovetail_client: Optional[DovetailClient] = None,
     ghost_site_url: str = "",
     transcript_dir: Optional[Path] = None,
+    notifier: Optional[MarkbotNotifier] = None,
 ) -> SyncResult:
     """Sync episodes to Ghost.
 
@@ -217,6 +219,7 @@ def sync_episodes(
         ghost_site_url: Public site URL for PRX writeback canonical links. Defaults to ghost_url.
         transcript_dir: Optional directory containing a transcript.txt file (canonical episode folder).
             When provided, overrides default transcript search paths for both WC and Luminous.
+        notifier: Optional MarkbotNotifier for Slack notifications (best-effort, failures are ignored).
 
     Returns:
         SyncResult with counts and episode details.
@@ -246,6 +249,10 @@ def sync_episodes(
             "podcast_id": podcast_id,
             "pub_date": episode.pub_date.isoformat() if episode.pub_date else "",
         })
+
+        # Notify: import started
+        if notifier and not dry_run:
+            notifier.import_start(episode.title)
 
         # Image processing pipeline: download artwork → upload to Ghost → generate OG image
         ghost_image_url = None
@@ -530,6 +537,14 @@ def sync_episodes(
                 "title": episode.title,
             })
 
+            # Notify: draft ready for review
+            if notifier:
+                notifier.import_draft(
+                    episode=episode.title,
+                    ghost_post_id=ghost_post_id,
+                    ghost_admin_url=ghost_url or client.api_url.rsplit("/ghost/api", 1)[0],
+                )
+
         except GhostAPIError as e:
             logger.error(f"Failed to publish '{episode.title}': {e}")
             tracker.record_failure(
@@ -538,6 +553,10 @@ def sync_episodes(
                 published_at=format_published_at(episode),
             )
             result.failed += 1
+
+            # Notify: import failed
+            if notifier:
+                notifier.import_failed(episode.title, str(e))
 
     return result
 
@@ -772,6 +791,34 @@ def _run_sync(
     if hasattr(args, 'transcript_dir') and args.transcript_dir:
         transcript_dir = Path(args.transcript_dir)
 
+    # Initialize markbot notifier (best-effort)
+    notifier = None
+    if not dry_run:
+        show_name = "Luminous" if feed_type == "luminous" else "Wonder Cabinet"
+        show_slug = "luminous" if feed_type == "luminous" else "wonder-cabinet"
+
+        # Resolve markbot path relative to meta-repo root
+        publisher_dir = Path(__file__).resolve().parent.parent  # src/ -> publisher root
+        meta_repo_root = publisher_dir.parent.parent  # modules/ -> meta-repo root
+        markbot_path = meta_repo_root / "modules" / "markbot" / "markbot.py"
+
+        # Read channel from show config
+        show_config_path = meta_repo_root / "shows" / show_slug / "config.json"
+        slack_channel = ""
+        if show_config_path.is_file():
+            try:
+                import json as _json
+                show_config = _json.loads(show_config_path.read_text())
+                slack_channel = show_config.get("slack", {}).get("channel", "")
+            except Exception:
+                pass
+
+        notifier = MarkbotNotifier(
+            markbot_path=markbot_path,
+            channel=slack_channel,
+            show=show_name,
+        )
+
     sync_result = sync_episodes(
         episodes,
         client,  # type: ignore
@@ -789,6 +836,7 @@ def _run_sync(
         dovetail_client=api_client,
         ghost_site_url=config.ghost_site_url,
         transcript_dir=transcript_dir,
+        notifier=notifier,
     )
 
     elapsed = round(time.monotonic() - sync_start, 1)
