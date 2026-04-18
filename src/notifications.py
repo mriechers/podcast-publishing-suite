@@ -8,11 +8,25 @@ the import pipeline is never blocked by notification issues.
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
+
+def _load_markbot_env(markbot_path: Path) -> dict[str, str]:
+    """Load env vars from markbot's .env file, merged with current env."""
+    env = os.environ.copy()
+    dotenv_path = markbot_path.parent / ".env"
+    if dotenv_path.is_file():
+        for line in dotenv_path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, value = line.partition("=")
+                env[key.strip()] = value.strip()
+    return env
 
 
 class MarkbotNotifier:
@@ -35,6 +49,7 @@ class MarkbotNotifier:
         self.show = show
         self.thread_ts: str | None = None
         self.enabled = bool(channel) and markbot_path.is_file()
+        self._env = _load_markbot_env(markbot_path) if self.enabled else {}
 
         if not self.enabled:
             if not channel:
@@ -50,6 +65,7 @@ class MarkbotNotifier:
         try:
             result = subprocess.run(
                 cmd, capture_output=True, text=True, timeout=30,
+                env=self._env,
             )
             if result.returncode != 0:
                 logger.warning(
