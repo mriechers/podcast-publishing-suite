@@ -80,7 +80,12 @@ class GhostPost:
         if self.codeinjection_head:
             data["codeinjection_head"] = self.codeinjection_head
         if self.feature_image_alt:
-            data["feature_image_alt"] = self.feature_image_alt
+            # Ghost limits feature_image_alt to 191 characters
+            alt = self.feature_image_alt
+            if len(alt) > 191:
+                logger.warning(f"Truncating feature_image_alt from {len(alt)} to 191 chars")
+                alt = alt[:188] + "..."
+            data["feature_image_alt"] = alt
         if self.feature_image_caption:
             data["feature_image_caption"] = self.feature_image_caption
 
@@ -215,8 +220,15 @@ class GhostClient:
             # Validation error
             errors = body.get("errors", [])
             error_msg = "; ".join(e.get("message", str(e)) for e in errors)
+            error_details = "; ".join(
+                e.get("context", e.get("details", ""))
+                for e in errors if e.get("context") or e.get("details")
+            )
+            full_msg = f"Validation error: {error_msg}"
+            if error_details:
+                full_msg += f" | Details: {error_details}"
             raise GhostAPIError(
-                f"Validation error: {error_msg}",
+                full_msg,
                 status_code=422,
                 response_body=body,
             )
