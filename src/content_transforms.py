@@ -189,11 +189,11 @@ WC_PROMO_FOOTER = r'''<p>\s*(?:<br\s*/?>?\s*)?(?:Visit|To follow Wonder Cabinet|
 WC_SUBSCRIPTION_REMINDER = r'''<p>[^<]*keep your subscription active[^<]*</p>'''
 
 # Dash dividers: <p>--</p> or <p>---</p> (with optional whitespace)
-WC_DASH_DIVIDER = r'''<p>\s*-{2,}\s*</p>'''
+WC_DASH_DIVIDER = r'''<p\b[^>]*>\s*(?:<(?:em|strong|b|i|u|span)(?:\s[^>]*)?>\s*)?-{2,}\s*(?:</(?:em|strong|b|i|u|span)>)?\s*</p>'''
 
 # Emdash/endash divider: <p>—</p>, <p>–</p>, <p>&mdash;</p>, etc.
 # Handles Unicode em/en dashes, HTML entities, and optional NBSP padding
-WC_EMDASH_DIVIDER = r'''<p>[\s\u00a0]*(?:[—\u2014–\u2013]|&[mn]dash;|&#821[23];|&#x201[34];){1,3}[\s\u00a0]*</p>'''
+WC_EMDASH_DIVIDER = r'''<p\b[^>]*>[\s ]*(?:<(?:em|strong|b|i|u|span)(?:\s[^>]*)?>[\s ]*)?(?:[—–]|&[mn]dash;|&#821[23];|&#x201[34];){1,3}[\s ]*(?:</(?:em|strong|b|i|u|span)>)?[\s ]*</p>'''
 
 # Chapters block format 1: a <p>Chapters:</p> heading followed by timestamped lines with <br>
 # Matches: <p>Chapters:</p><p>00:00:00 Title<br>00:04:34 Title<br>...</p>

@@ -67,3 +67,23 @@ class TestEmdashStripping:
 
     def test_emdash_does_not_match_text(self):
         assert not re.search(WC_EMDASH_DIVIDER, '<p>This — that</p>')
+
+    def test_endash_standalone(self):
+        # En dash (U+2013) on its own — appears between body and timestamps in WC feeds
+        assert re.search(WC_EMDASH_DIVIDER, '<p>–</p>')
+
+    def test_strong_wrapped_endash(self):
+        # Real-world failure: WC E13 (Sharon Blackie, May 2026) had <p><strong>–</strong></p>
+        # between body text and Links list, which slipped past the original regex.
+        assert re.search(WC_EMDASH_DIVIDER, '<p><strong>–</strong></p>')
+
+    def test_em_wrapped_emdash(self):
+        assert re.search(WC_EMDASH_DIVIDER, '<p><em>—</em></p>')
+
+    def test_strong_wrapped_emdash_with_padding(self):
+        assert re.search(WC_EMDASH_DIVIDER, '<p><strong> — </strong></p>')
+
+    def test_p_with_attributes(self):
+        # Editor-injected attributes like dir="ltr" should not block the match
+        assert re.search(WC_EMDASH_DIVIDER, '<p dir="ltr">—</p>')
+        assert re.search(WC_EMDASH_DIVIDER, '<p class="x">—</p>')
