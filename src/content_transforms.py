@@ -193,7 +193,14 @@ WC_DASH_DIVIDER = r'''<p\b[^>]*>\s*(?:<(?:em|strong|b|i|u|span)(?:\s[^>]*)?>\s*)
 
 # Emdash/endash divider: <p>—</p>, <p>–</p>, <p>&mdash;</p>, etc.
 # Handles Unicode em/en dashes, HTML entities, and optional NBSP padding
-WC_EMDASH_DIVIDER = r'''<p\b[^>]*>[\s ]*(?:<(?:em|strong|b|i|u|span)(?:\s[^>]*)?>[\s ]*)?(?:[—–]|&[mn]dash;|&#821[23];|&#x201[34];){1,3}[\s ]*(?:</(?:em|strong|b|i|u|span)>)?[\s ]*</p>'''
+_PAD = r'''(?:[\s ]|&nbsp;|&#160;|&#xa0;)*'''
+WC_EMDASH_DIVIDER = (
+    r'''<p\b[^>]*>''' + _PAD
+    + r'''(?:<(?:em|strong|b|i|u|span)(?:\s[^>]*)?>''' + _PAD + r''')?'''
+    + r'''(?:[—–]|&[mn]dash;|&#821[23];|&#x201[34];){1,3}''' + _PAD
+    + r'''(?:</(?:em|strong|b|i|u|span)>)?''' + _PAD
+    + r'''</p>'''
+)
 
 # Chapters block format 1: a <p>Chapters:</p> heading followed by timestamped lines with <br>
 # Matches: <p>Chapters:</p><p>00:00:00 Title<br>00:04:34 Title<br>...</p>
@@ -281,6 +288,107 @@ def _style_link_lists(content: str) -> str:
     )
 
 
+# Matches a single "link paragraph": <p>[short prefix]<a href="…">[<strong>]label[</strong>]</a>[short suffix]</p>
+# Used by _wrap_bare_link_paragraphs to detect runs of standalone link <p>s.
+_LINK_PARAGRAPH = re.compile(
+    r'''<p>'''
+    r'''(?P<prefix>[^<]{0,80}?)'''
+    r'''<a\s+href="(?P<href>[^"]+)"(?P<arest>[^>]*)>'''
+    r'''\s*(?:<strong>)?\s*(?P<label>[^<]+?)\s*(?:</strong>)?\s*'''
+    r'''</a>'''
+    r'''(?P<suffix>[^<]{0,40}?)'''
+    r'''</p>''',
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _wrap_bare_link_paragraphs(content: str) -> str:
+    """Wrap runs of 2+ consecutive bare <p><a> link paragraphs in a styled <ul>.
+
+    PRX feeds sometimes deliver episode-notes links as a sequence of plain
+    <p><a href="…"><strong>Label</strong></a></p> paragraphs (no <ul> at all).
+    The Wonder Cabinet theme styles only <ul class="wc-episode-notes-content-links">,
+    so without this wrap the links render as undifferentiated body text — no
+    "Links" section visual treatment.
+
+    A "link paragraph" is one whose only tag is a single <a>, with optional
+    short plain text before/after. To avoid grabbing prose-with-link, the
+    classifier requires:
+      - prefix is empty OR ends with ':' (after stripping whitespace/quotes)
+      - suffix has no word characters (allows quotes, &nbsp;, punctuation only)
+    Runs of 1 are left alone; 2+ contiguous matches are wrapped together.
+
+    Real-world failure (WC E14, Christof Koch, May 2026): PRX delivered three
+    links as <p><a href="…"><strong>Label</strong></a></p> paragraphs after a
+    dash divider. The dash got stripped, but no styled <ul> was produced.
+    """
+    p_re = re.compile(r'<p\b[^>]*>.*?</p>', re.IGNORECASE | re.DOTALL)
+    matches = list(p_re.finditer(content))
+    if len(matches) < 2:
+        return content
+
+    word_re = re.compile(r'[A-Za-z0-9]')
+
+    def classify(m):
+        text = m.group(0)
+        if text.count('<a ') > 1:
+            return None
+        lm = _LINK_PARAGRAPH.fullmatch(text)
+        if not lm:
+            return None
+        raw_prefix = (lm.group('prefix') or '').strip().strip('"“”').strip()
+        raw_suffix = (lm.group('suffix') or '').replace('&nbsp;', '').strip().strip('"“”').strip()
+        if word_re.search(raw_suffix):
+            return None
+        if word_re.search(raw_prefix) and not raw_prefix.endswith(':'):
+            return None
+        prefix = raw_prefix.rstrip(':').strip()
+        label = lm.group('label').strip()
+        full = f'{prefix}: {label}' if prefix else label
+        return {'href': lm.group('href'), 'label': full}
+
+    classified = [(m, classify(m)) for m in matches]
+
+    out_parts = []
+    cursor = 0
+    i = 0
+    while i < len(classified):
+        m, info = classified[i]
+        if info is None:
+            i += 1
+            continue
+        run_end = i
+        while run_end + 1 < len(classified):
+            next_m, next_info = classified[run_end + 1]
+            if next_info is None:
+                break
+            between = content[classified[run_end][0].end():next_m.start()]
+            if between.strip():
+                break
+            run_end += 1
+        if run_end > i:
+            run_start_off = matches[i].start()
+            run_end_off = matches[run_end].end()
+            out_parts.append(content[cursor:run_start_off])
+            li_html = '\n'.join(
+                f'<li><a href="{c[1]["href"]}" target="_blank" rel="noopener noreferrer">{c[1]["label"]}</a></li>'
+                for c in classified[i:run_end + 1]
+            )
+            out_parts.append(
+                '<!--kg-card-begin: html-->\n'
+                '<ul class="wc-episode-notes-content-links">\n'
+                f'{li_html}\n'
+                '</ul>\n'
+                '<!--kg-card-end: html-->'
+            )
+            cursor = run_end_off
+            i = run_end + 1
+        else:
+            i += 1
+    out_parts.append(content[cursor:])
+    return ''.join(out_parts)
+
+
 TTBOOK_CONFIG = FeedTransformConfig(
     feed_id="ttbook",
     removal_rules=[
@@ -350,6 +458,7 @@ TTBOOK_CONFIG = FeedTransformConfig(
     ],
     custom_transforms=[
         _reformat_plain_text_links,
+        _wrap_bare_link_paragraphs,
         _style_link_lists,
     ],
 )
