@@ -251,7 +251,25 @@
     "prx_writeback_done": false,
     "ghost_slug": "why-we-need-fairy-tales-now-with-sharon-blackie"
   },
+  "prx_120_b227bf02-bc62-4cfa-a262-7d6dd6ba816f": {
+    "ghost_post_id": "6a07c1873556b2000180a271",
+    "title": "Christof Koch on the Cosmic Toad",
+    "published_at": "2026-05-16T11:00:00.000Z",
+    "synced_at": "2026-05-15T19:59:53.096446",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": false,
+    "ghost_slug": "christof-koch-on-the-cosmic-toad"
+  },
   "_metadata": {
-    "last_sync_time": "2026-05-08T19:02:29.466467"
+    "last_sync_time": "2026-05-15T19:59:17.924242"
   }
 }
