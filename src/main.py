@@ -47,6 +47,10 @@ from .waveform_peaks import (
     get_peaks_url,
 )
 from .transcript_exporter import export_episode_transcript
+from .transcript_provenance import (
+    gate_published_transcript,
+    producer_doc_id_from_manifest,
+)
 from .feed_parser import (
     Episode,
     FeedFetchError,
@@ -401,6 +405,28 @@ def sync_episodes(
             wc_transcript = load_wc_transcript(episode.title, transcript_dir=transcript_dir)
             if wc_transcript:
                 logger.info(f"  Found local transcript for: {episode.title}")
+
+                # Provenance gate: confirm the transcript we're about to publish
+                # reflects the producer's speaker-label edits. Auto-engages when the
+                # episode manifest references a producer edit-transcript Drive doc.
+                # Hard-blocks (raises) on any divergence — see transcript_provenance.py.
+                producer_doc_id = None
+                if transcript_dir:
+                    manifest_path = Path(transcript_dir) / "manifest.json"
+                    if manifest_path.exists():
+                        try:
+                            producer_doc_id = producer_doc_id_from_manifest(
+                                json_module.loads(manifest_path.read_text())
+                            )
+                        except Exception as e:
+                            logger.warning(f"  Could not read manifest for provenance gate: {e}")
+                if producer_doc_id:
+                    aligned = gate_published_transcript(wc_transcript, producer_doc_id)
+                    logger.info(
+                        f"  Transcript provenance verified ({aligned} turns) "
+                        f"vs producer doc {producer_doc_id}"
+                    )
+
                 ttbook_transcript_html = format_transcript_html(wc_transcript)
 
             # Fall back to RSS transcript if no local transcript found
