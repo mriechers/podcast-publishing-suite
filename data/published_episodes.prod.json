@@ -269,7 +269,61 @@
     "prx_writeback_done": false,
     "ghost_slug": "christof-koch-on-the-cosmic-toad"
   },
+  "prx_120_bdbfe09d-ba88-43b9-a9b2-580b913439cd": {
+    "ghost_post_id": "6a1104257a547e0001322543",
+    "title": "Rewilding Attention with D. Graham Burnett",
+    "published_at": "2026-05-23T11:00:00.000Z",
+    "synced_at": "2026-05-22T20:34:30.471381",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": false,
+    "ghost_slug": "rewilding-attention-with-d-graham-burnett"
+  },
+  "prx_120_c22d2e4c-d951-4506-9c50-fff3bd6f3d7e": {
+    "ghost_post_id": "6a2cba6bb4c31c000119a6d8",
+    "title": "An Evening of Wonder with Alan Lightman",
+    "published_at": "2026-06-13T11:00:00.000Z",
+    "synced_at": "2026-06-12T21:03:24.545192",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": false,
+    "ghost_slug": "an-evening-of-wonder-with-alan-lightman"
+  },
+  "prx_120_86e83009-e2c9-4af7-bc82-74cb9c0b0653": {
+    "ghost_post_id": "6a360be3e1cf630001595799",
+    "title": "The Spiritual Ecology of Emmanuel Vaughan-Lee",
+    "published_at": "2026-06-20T11:00:00.000Z",
+    "synced_at": "2026-06-19T22:41:25.045745",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": false,
+    "ghost_slug": "the-spiritual-ecology-of-emmanuel-vaughan-lee"
+  },
   "_metadata": {
-    "last_sync_time": "2026-05-15T19:59:17.924242"
+    "last_sync_time": "2026-06-19T22:40:53.388525"
   }
 }
