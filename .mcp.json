@@ -6,7 +6,7 @@
       "cwd": "/Users/mriechers/Developer/podcast-publishing-suite/prx-to-ghost-publisher",
       "env": {
         "GHOST_API_URL": "https://wonder-cabinet.ghost.io",
-        "GHOST_ADMIN_API_KEY": "698595ddaa8b2100016a9bca:c7ce292aea3f57aecd42eca447f9f58d64a276ae59a2b61431767846294ffc19",
+        "GHOST_ADMIN_API_KEY": "${GHOST_AGENT_API_KEY}",
         "GHOST_API_VERSION": "v5.0"
       }
     },
