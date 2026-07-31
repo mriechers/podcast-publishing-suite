@@ -59,6 +59,18 @@ class TestIdentityRules:
         assert counts == {"Versher": 1}
         assert "Versher," not in p.read_text()
 
+    def test_case_only_correction_is_counted(self):
+        """A case-only fix isn't an identity rule and must still be applied and counted.
+
+        Guards against a future "compare case-insensitively" tweak to the
+        identity skip silently swallowing real corrections like this one.
+        """
+        text = "we visited vershire last spring"
+        new_text, counts = apply_corrections(text, {"vershire": "Vershire"})
+
+        assert new_text == "we visited Vershire last spring"
+        assert counts == {"vershire": 1}
+
 
 class TestIdempotence:
     """Re-running on corrected text must be a true no-op, including in the report."""
