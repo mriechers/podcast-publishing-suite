@@ -27,9 +27,14 @@ Two regex traps the implementation handles explicitly:
    the script masks comment regions before applying corrections and restores
    them afterward.
 
-Idempotent: re-running on already-corrected text is a no-op (no matches).
-Word-boundary lookarounds also prevent the `sikere → sikerei` class of bug,
-where a correction would otherwise cascade into already-correct output.
+Idempotent: re-running on already-corrected text is a no-op — no file write, no
+backup, and **zero reported replacements**. Rules whose key equals their value,
+or whose substitution is byte-neutral, are skipped rather than counted; counting
+them made the tool report phantom work on files it never touched (and inflate the
+"files changed" tally), which makes "did the glossary step do anything?"
+unanswerable from the output. Word-boundary lookarounds also prevent the
+`sikere → sikerei` class of bug, where a correction would otherwise cascade into
+already-correct output.
 """
 
 from __future__ import annotations
@@ -85,11 +90,17 @@ def apply_corrections(text: str, corrections: dict[str, str]) -> tuple[str, dict
     counts: dict[str, int] = {}
     sorted_corrections = sorted(corrections.items(), key=lambda kv: (-len(kv[0]), kv[0]))
     for bad, good in sorted_corrections:
-        if not bad:
+        if not bad or bad == good:
+            # Identity rules match but rewrite nothing. Counting them reports work
+            # that never happened, which also inflates the caller's "files changed"
+            # tally for files left untouched on disk.
             continue
         pattern = r"(?<!\w)" + re.escape(bad) + r"(?!\w)"
         new_text, n = re.subn(pattern, good, text)
-        if n:
+        if n and new_text != text:
+            # Only count substitutions that actually changed bytes. The identity
+            # skip above covers the common case; this is the general invariant,
+            # and it also catches a byte-neutral cascade (one rule undoing another).
             counts[bad] = n
         text = new_text
     return text, counts
