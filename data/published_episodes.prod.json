@@ -323,7 +323,61 @@
     "prx_writeback_done": false,
     "ghost_slug": "the-spiritual-ecology-of-emmanuel-vaughan-lee"
   },
+  "prx_120_ed304780-d548-44a9-b6a0-605d9e60810f": {
+    "ghost_post_id": "6a6da446dd15f40001304669",
+    "title": "The Conscious Universe: Panpsychism with Philip Goff",
+    "published_at": "2026-08-01T11:00:00.000Z",
+    "synced_at": "2026-08-01T02:46:15.646256",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": false,
+    "ghost_slug": "the-conscious-universe-panpsychism-with-philip-goff"
+  },
+  "prx_120_bcb6f5d5-f405-460d-8e8d-63635f88292f": {
+    "ghost_post_id": "6a76c584f8ce8b0001f172c2",
+    "title": "Chasing Wilderness with Cal Flyn (and Gary Snyder)",
+    "published_at": "2026-08-08T11:00:00.000Z",
+    "synced_at": "2026-08-08T00:58:29.571271",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": false,
+    "ghost_slug": "chasing-wilderness-with-cal-flyn-and-gary-snyder"
+  },
+  "prx_120_d044e23d-d4ac-401b-94cf-e3ee96ccc1b8": {
+    "ghost_post_id": "6a7fb86f70a0620001220103",
+    "title": "Poetry Against Despair with Christian Wiman",
+    "published_at": "2026-08-15T11:00:00.000Z",
+    "synced_at": "2026-08-14T19:53:04.771384",
+    "status": "draft",
+    "audio_uploaded": false,
+    "audio_ghost_url": "",
+    "peaks_uploaded": false,
+    "transcript_synced": false,
+    "transcript_source": "",
+    "srt_available": false,
+    "video_generated": false,
+    "youtube_id": "",
+    "social_queued": false,
+    "prx_writeback_done": false,
+    "ghost_slug": "poetry-against-despair-with-christian-wiman"
+  },
   "_metadata": {
-    "last_sync_time": "2026-06-19T22:40:53.388525"
+    "last_sync_time": "2026-08-14T19:52:34.544196"
   }
 }
