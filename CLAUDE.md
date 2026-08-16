@@ -1,16 +1,17 @@
 # podcast-publishing-suite
 
-Meta-repository for the podcast publishing pipeline at **Wonder Cabinet Productions**. Manages per-show configuration, pipeline tool submodules, and a unified dashboard frontend.
+Meta-repository for the podcast publishing pipeline at **Wonder Cabinet Productions**. Manages per-show configuration, pipeline tool modules, and a unified dashboard frontend.
 
 ## Directory Structure
 
 ```
 podcast-publishing-suite/
-├── modules/                          # Git submodules — pipeline tools
+├── modules/                          # Pipeline tools (inline source, not submodules)
+│   ├── analytics-dashboard/          # PRX CSV import, publication stats
 │   ├── audiogram-tools/              # Remotion-based animated audiogram generation
+│   ├── markbot/                      # Centralized Slack bot
 │   ├── podcast-whisper-transcription/ # OpenAI Whisper transcription pipeline
-│   ├── prx-to-ghost-publisher/       # PRX Dovetail → Ghost CMS publisher
-│   └── robo-social/                  # Social media distribution (placeholder)
+│   └── prx-to-ghost-publisher/       # PRX Dovetail → Ghost CMS publisher
 ├── frontend/                         # Unified dashboard (React 18 + Vite + Tailwind / FastAPI)
 │   ├── api/                          # FastAPI backend
 │   ├── web/                          # React frontend
@@ -42,13 +43,13 @@ Ghost site: [wondercabinetproductions.com](https://wondercabinetproductions.com)
 
 ## Module Status
 
-| Module | Status | Show-Specific? | Notes |
-|--------|--------|----------------|-------|
-| audiogram-tools | Active | Yes — Wonder Cabinet branding hardcoded | Remotion compositions, galaxy spiral animations |
-| podcast-whisper-transcription | Active | Partially — processing scripts reference WC episodes | Whisper turbo, speaker diarization |
-| prx-to-ghost-publisher | Active | Multi-show via config | Supports both shows, Ghost theme in development |
-| markbot | Active | Multi-show via config | Centralized Slack bot; `post`, `transcribe-*`, `ghost-import`, `schedule-alert` commands |
-| robo-social | Placeholder | N/A | README only, not yet implemented |
+| Module | Status | Notes |
+|--------|--------|-------|
+| audiogram-tools | Active | Remotion compositions, galaxy spiral animations |
+| podcast-whisper-transcription | Active | Whisper turbo, speaker diarization |
+| prx-to-ghost-publisher | Active | Supports both shows, Ghost theme in development |
+| markbot | Active | Centralized Slack bot |
+| analytics-dashboard | Active | PRX CSV import, publication stats |
 
 ### Pipeline commands (in-repo, `.claude/commands/`)
 
@@ -67,11 +68,8 @@ These are slash commands tracked in this repo — `.gitignore` excludes `.claude
 ## Key Commands
 
 ```bash
-# Clone with all submodules
-git clone --recurse-submodules git@github.com:Wonder-Cabinet-Productions/podcast-publishing-suite.git
-
-# Initialize submodules after clone
-git submodule update --init --recursive
+# Clone — modules are inline source, no submodule init needed
+git clone git@github.com:public-media-work/podcast-publishing-suite.git
 
 # Frontend development
 cd frontend/web && npm install && npm run dev     # React dev server
@@ -81,9 +79,11 @@ cd frontend && uvicorn api.main:app --reload       # FastAPI dev server
 
 ## Conventions
 
-- **Never force-push master** — current submodule iterations are in production
+- **Never force-push master** — current module iterations are in production
 - **Feature work on branches** — always branch from master for structural changes
-- **Submodule cleanup**: removing a submodule requires cleaning 3 places (`.gitmodules`, `.git/config`, `.git/modules/`)
+- **Modules are inline** — `modules/<name>/` is ordinary source in this repo, imported via
+  `git subtree` on 2026-08-15. There are no submodules and no `.gitmodules`; the former module
+  repos are archived read-only. Do not re-extract a module into its own repo.
 - **Naming**: "Podbridge" was an earlier editorial-assistant repurposing (archived in `reference/`). "Cardigan" refers to the PBS Wisconsin project — do not conflate them
 - **Show configs**: `shows/<slug>/` is the source of truth for per-show settings. `config.json` for service config, `brand.json` for visual identity, `assets/` for images. Modules should read from here rather than hardcoding values
 - **Module design docs**: each module should have `docs/MODULE_DESIGN.md` following the template at `docs/MODULE_DESIGN_TEMPLATE.md`
@@ -95,13 +95,15 @@ cd frontend && uvicorn api.main:app --reload       # FastAPI dev server
 - **Module genericization** — make audiogram-tools and whisper-transcription show-agnostic (read from `shows/` configs). Always on feature branches
 - **Frontend buildout** — replace cardigan template scaffolding with podcast pipeline views (episode runs, module status, show switching)
 - **robo-social implementation** — social media distribution automation
-- **CI/CD** — automated testing across submodules, frontend deployment
+- **CI/CD** — automated testing across modules, frontend deployment
 
 ## Agent skills
 
 ### Issue tracker
 
-GitHub Issues on `Wonder-Cabinet-Productions/podcast-publishing-suite`, via the `gh` CLI — module-specific work is filed on the module's own repo. See `docs/agents/issue-tracker.md`.
+Code issues go to the base repo `mriechers/podcast-publishing-suite` via the `gh` CLI — always
+pass `--repo` explicitly. Organization-specific operational issues go to that org's own tracker.
+See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

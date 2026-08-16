@@ -1,8 +1,15 @@
 # Issue tracker: GitHub
 
-Issues and PRDs for this repo live as GitHub issues on `Wonder-Cabinet-Productions/podcast-publishing-suite`. Use the `gh` CLI for all operations.
+Issues live in two places, by kind. **Code issues — anything about `modules/`, `frontend/`,
+`scripts/`, or the pipeline itself — go to the base repo,
+`mriechers/podcast-publishing-suite`.** Organization-specific operational issues (a given
+episode, a show's content, a station's workflow) go to that organization's own tracker where it
+has one; Wonder Cabinet Productions keeps its own. Use the `gh` CLI for all operations.
 
-**Submodule scoping.** This repo is a metarepo over pipeline module submodules (`modules/*`). Running `gh` from inside `modules/<name>` targets *that module's* repo, not this one. File the issue where the code lives — unless the issue is precisely about the seam between modules, which belongs here. Note that every module remote currently points at the personal `mriechers/*` account rather than the org; that discrepancy is itself a mapped decision, not a thing to fix incidentally.
+**Single repo, no submodules.** Module code lives inline under `modules/<name>/` in this
+repository; the standalone module repos were archived on 2026-08-15. There is no per-module
+repo to file against. Issues carried over from the archived repos keep a `module: *` label
+recording where they came from.
 
 **Existing label vocabulary.** This repo already uses `type: *`, `executor: *`, `priority: *`, `review: *`, and `agent-discovered`. Those are orthogonal to the triage-state labels in `triage-labels.md` — apply both, don't substitute one for the other.
 
@@ -15,7 +22,10 @@ Issues and PRDs for this repo live as GitHub issues on `Wonder-Cabinet-Productio
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`
 
-Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
+**Always pass `--repo` explicitly. Never let `gh` infer it.** The base repo is not necessarily a
+remote of the clone you are standing in — a fork's `origin` points at the fork, and `gh` resolves
+to that instead, so an inferred call files into the wrong repo and reports success. Pass
+`--repo mriechers/podcast-publishing-suite` for code issues.
 
 ## Pull requests as a triage surface
 
