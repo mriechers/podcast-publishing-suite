@@ -274,6 +274,13 @@ Merged PRs change `main`, so Task 10 will pick the merge up automatically — th
 - Depends on: Task 1 mirrors
 - Produces: a per-module verdict of `clean` (full history import) or `not-clean` (`--squash`), consumed by Tasks 9 and 10
 
+**Classify every finding as history-only or present-at-HEAD first — they have different remedies, and only one of them is an import-mode choice:**
+
+- **History-only** (deleted from the working tree at some point, but alive in old commits): this is what `--squash` is for. Trade the module's history for not publishing the bad commits.
+- **Present at HEAD**: `--squash` does **nothing** here. Squashing drops history; a value at HEAD publishes either way. The only remedies are removing it from the file and rotating the credential. **A live secret at HEAD blocks the public inline entirely** — it is not a choice between import modes, and no verdict should be written until it is resolved.
+
+Check with `git cat-file -e main:<path>`; if the file exists at HEAD, read the line rather than assuming the finding is historical.
+
 - [ ] **Step 1: Scan full history for credentials**
 
 Run against the mirrors, which contain every ref including deleted branches.
@@ -315,6 +322,13 @@ done
 If `gitleaks` is available, run `gitleaks detect --source <mirror> --no-git` as a second opinion. It is a supplement, not a replacement — a clean gitleaks run does not clear personal data.
 
 - [ ] **Step 4: Write the verdict, one file per module**
+
+**Never print a matched credential value — not into the transcript, not into any file.** The
+scanning commands below use `grep -n` and will echo matching lines. Pipe them so you see the
+*location and shape* of a hit, never its value: record `file:line — Ghost admin key`, never the
+key itself. An agent transcript is a durable copy, and a credential that lands in one must be
+treated as compromised and rotated. If a command would dump a value, redirect it to a
+git-ignored file and read only the parts you need.
 
 **Split the findings from the sign-off.** The sign-off is committed and Task 13 pushes it to a
 *public* repo — so "Ghost admin key in commit abc1234" would publish a map to the secret while
@@ -869,7 +883,7 @@ git ls-tree -r HEAD --name-only -- modules/prx-to-ghost-publisher | sort > /tmp/
 diff /tmp/before-prx.txt /tmp/after-prx.txt
 ```
 
-Expected under **clean**: "full history grafted", commit count up ~68. Under **not-clean**: "squashed", up by 1–2. The file diff should show upstream additions since the snapshot, including whatever Task 2 merged. As in Task 9, full history under a not-clean verdict means stop and redo before pushing. Do not use `git log -- modules/…` here.
+Expected under **clean**: "full history grafted", commit count up ~71. (It was 68 when this plan was written; main gained PRs #44/#55 and the 2026-08-16 audit fix. Upstream tip is now `472ae6c`.) Under **not-clean**: "squashed", up by 1–2. The file diff should show upstream additions since the snapshot, including whatever Task 2 merged. As in Task 9, full history under a not-clean verdict means stop and redo before pushing. Do not use `git log -- modules/…` here.
 
 - [ ] **Step 6: Run the module's test suite — 11 test files, the largest in the repo**
 
