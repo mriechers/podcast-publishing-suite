@@ -1,6 +1,6 @@
 # podcast-publishing-suite
 
-A meta-repository for the podcast publishing pipeline at Wonder Cabinet Productions. Each module handles a stage in the workflow — from transcription through web publishing to social distribution.
+A meta-repository for an agentic podcast publishing pipeline. Each service handles a stage in the workflow — from transcription and pre-production through web publishing to social distribution.
 
 ## Pipeline
 
@@ -16,6 +16,7 @@ Audio File
   ├─→ modules/robo-social                   (social distribution)
   │
   └─→ frontend/                              (unified dashboard)
+
 ```
 
 ## Modules
@@ -25,7 +26,6 @@ Audio File
 | [podcast-whisper-transcription](modules/podcast-whisper-transcription/) | Transcription pipeline using OpenAI Whisper |
 | [prx-to-ghost-publisher](modules/prx-to-ghost-publisher/) | Automated PRX podcast feed → Ghost CMS publisher |
 | [audiogram-tools](modules/audiogram-tools/) | Animated audiogram generation from podcast audio |
-| [robo-social](modules/robo-social/) | Social media distribution automation for podcast content |
 
 ## Frontend
 
@@ -37,8 +37,6 @@ Per-show configuration lives in `shows/`. Each show has a `config.json` with PRX
 
 | Show | Config |
 |------|--------|
-| Wonder Cabinet | [shows/wonder-cabinet/config.json](shows/wonder-cabinet/config.json) |
-| Luminous | [shows/luminous/config.json](shows/luminous/config.json) |
 
 ## Reference
 
@@ -46,17 +44,6 @@ The `reference/` directory (gitignored) contains archived planning docs and earl
 
 ## Getting Started
 
-Clone with submodules:
-
-```bash
-git clone --recurse-submodules git@github.com:Wonder-Cabinet-Productions/podcast-publishing-suite.git
-```
-
-If you already cloned without `--recurse-submodules`:
-
-```bash
-git submodule update --init --recursive
-```
 
 ## Individual Projects
 
