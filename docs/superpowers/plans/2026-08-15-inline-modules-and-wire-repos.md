@@ -638,12 +638,12 @@ git subtree add --prefix=modules/audiogram-tools \
 ```bash
 SHA=$(git log -1 --format=%s | sed -E "s/.*from commit '([0-9a-f]+)'.*/\1/")
 git merge-base --is-ancestor "$SHA" HEAD && echo "history grafted" || echo "HISTORY MISSING"
-git rev-list --count HEAD            # should have grown by ~38
+git rev-list --count HEAD            # should have grown by ~51
 git ls-tree -r HEAD --name-only -- modules/audiogram-tools | sort > /tmp/after-audiogram.txt
 diff /tmp/before-audiogram.txt /tmp/after-audiogram.txt
 ```
 
-"history grafted" plus a commit-count jump of roughly 38 confirms real history. Do **not** use `git log -- modules/audiogram-tools` as the check — see "How to verify a subtree import" above; it undercounts by design and makes a correct import look failed. **Read the diff rather than skimming it.** Files present before but absent after mean the snapshot carried local edits that were never pushed upstream — recover them from the Task 1 mirror before continuing. Files added are expected: upstream moved since the snapshot.
+"history grafted" plus a commit-count jump of roughly 51 confirms real history. (It was 38 when this plan was written; `main` gained 13 commits on 2026-08-16 when the `feat/youtube-export-pipeline` branch was merged via PR #17. The upstream tip is now `1e44191`.) Do **not** use `git log -- modules/audiogram-tools` as the check — see "How to verify a subtree import" above; it undercounts by design and makes a correct import look failed. **Read the diff rather than skimming it.** Files present before but absent after mean the snapshot carried local edits that were never pushed upstream — recover them from the Task 1 mirror before continuing. Files added are expected: upstream moved since the snapshot.
 
 - [ ] **Step 6: Verify the module still builds**
 
