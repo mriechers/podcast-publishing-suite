@@ -1,0 +1,14 @@
+# gitleaks configuration
+#
+# Context: a 2026-08-16 audit of this repo returned 71 findings, 70 of which were
+# false positives in cached third-party web pages kept as test fixtures. That noise
+# buried the single finding worth looking at. This allowlist keeps future scans useful.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Cached public ttbook.org pages used as test fixtures — scraped HTML, no secrets of ours"
+paths = [
+  '''sample-data/ttbook-cache/.*\.html''',
+]

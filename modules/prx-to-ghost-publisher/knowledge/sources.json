@@ -1,0 +1,70 @@
+{
+  "sources": [
+    {
+      "category": "ghost",
+      "slug": "introduction",
+      "url": "https://raw.githubusercontent.com/TryGhost/Docs/main/introduction.mdx",
+      "notes": "Introduction to Ghost platform"
+    },
+    {
+      "category": "ghost",
+      "slug": "admin-api",
+      "url": "https://raw.githubusercontent.com/TryGhost/Docs/main/admin-api.mdx",
+      "notes": "Admin API overview and reference"
+    },
+    {
+      "category": "ghost",
+      "slug": "content-api",
+      "url": "https://raw.githubusercontent.com/TryGhost/Docs/main/content-api.mdx",
+      "notes": "Content API overview and reference"
+    },
+    {
+      "category": "ghost",
+      "slug": "webhooks",
+      "url": "https://raw.githubusercontent.com/TryGhost/Docs/main/webhooks.mdx",
+      "notes": "Webhooks for event-driven automation"
+    },
+    {
+      "category": "ghost",
+      "slug": "publishing",
+      "url": "https://raw.githubusercontent.com/TryGhost/Docs/main/publishing.mdx",
+      "notes": "Publishing content with Ghost"
+    },
+    {
+      "category": "ghost",
+      "slug": "members",
+      "url": "https://raw.githubusercontent.com/TryGhost/Docs/main/members.mdx",
+      "notes": "Members and subscriptions"
+    },
+    {
+      "category": "ghost",
+      "slug": "newsletters",
+      "url": "https://raw.githubusercontent.com/TryGhost/Docs/main/newsletters.mdx",
+      "notes": "Newsletter functionality"
+    },
+    {
+      "category": "ghost",
+      "slug": "admin-api-posts",
+      "url": "https://raw.githubusercontent.com/TryGhost/Docs/main/admin-api/posts.mdx",
+      "notes": "Posts endpoint in Admin API"
+    },
+    {
+      "category": "ghost",
+      "slug": "admin-api-tags",
+      "url": "https://raw.githubusercontent.com/TryGhost/Docs/main/admin-api/tags.mdx",
+      "notes": "Tags endpoint in Admin API"
+    },
+    {
+      "category": "ghost",
+      "slug": "admin-api-authentication",
+      "url": "https://raw.githubusercontent.com/TryGhost/Docs/main/admin-api/authentication.mdx",
+      "notes": "Authentication for Admin API"
+    },
+    {
+      "category": "ghost",
+      "slug": "content-api-posts",
+      "url": "https://raw.githubusercontent.com/TryGhost/Docs/main/content-api/posts.mdx",
+      "notes": "Posts endpoint in Content API"
+    }
+  ]
+}
