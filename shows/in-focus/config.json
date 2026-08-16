@@ -1,0 +1,46 @@
+{
+  "name": "In Focus with Murv Seymour",
+  "slug": "in-focus",
+  "mediaIdPrefix": "INF",
+  "ingest": {
+    "url": "https://mmingest.pbswi.wisc.edu/InFocus/",
+    "episodePattern": "^6INF\\d{4}(?:_REV\\d{8})?$",
+    "artifacts": {
+      ".wav": { "dest": "audio", "required": true },
+      ".srt": { "dest": "captions" },
+      ".scc": { "dest": "captions" },
+      ".txt": { "dest": "captions" }
+    },
+    "note": "Production also drops .mp3, .mp4 and podcast tiles here; only the artifacts above are pulled. Revisions carry a _REV<YYYYMMDD> suffix and are separate episodes."
+  },
+  "episodes": {
+    "localPath": "shows/in-focus/episodes",
+    "subdirs": {
+      "audio": "audio"
+    }
+  },
+  "stitch": {
+    "output": "{episode}.mp3",
+    "encode": {
+      "bitrate": "192k",
+      "sampleRate": 44100
+    },
+    "segments": [
+      {
+        "id": "intro",
+        "source": "asset",
+        "file": "assets/audio/INFOCUS_INTRO.wav"
+      },
+      {
+        "id": "program",
+        "source": "episode",
+        "match": "\\d?INF\\d{4}"
+      },
+      {
+        "id": "outro",
+        "source": "asset",
+        "file": "assets/audio/INFOCUS_OUTRO.wav"
+      }
+    ]
+  }
+}

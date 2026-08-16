@@ -1,0 +1,37 @@
+{
+  "_README": [
+    "DISABLED. Activate with:  mv .mcp.json.disabled .mcp.json",
+    "",
+    "This does not work yet, and the blocker is not in this file.",
+    "AIRTABLE_API_KEY is not registered in Infisical -- `lodge-doctor secret",
+    "infisical-locator AIRTABLE_API_KEY` reports 'no active infisical secret",
+    "found'. It currently exists only in the macOS keychain, which an agent",
+    "process cannot read (rc=36, errSecInteractionNotAllowed).",
+    "",
+    "To enable:",
+    "  1. Add AIRTABLE_API_KEY to Infisical (web UI).",
+    "  2. Run /add-secret to register it in registry.yaml.",
+    "  3. Verify:  GET_SECRET_DEBUG=1 get-secret.sh AIRTABLE_API_KEY >/dev/null",
+    "  4. mv .mcp.json.disabled .mcp.json",
+    "",
+    "Why this resolves the secret through get-secret.sh rather than calling",
+    "`security find-generic-password -w` directly, the way the parent pbswi",
+    "workspace .mcp.json does: the raw keychain call is what the workspace",
+    "convention explicitly forbids, and it is why AirTable access fails from",
+    "every spawned agent process while appearing to work by hand.",
+    "",
+    "The wrapper fails loudly on purpose. A bare $(get-secret.sh ...) yields an",
+    "EMPTY string when resolution fails, so the server would start cleanly and",
+    "then 401 on every call -- a much worse failure than not starting."
+  ],
+  "mcpServers": {
+    "airtable": {
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "-c",
+        "KEY=\"$(get-secret.sh AIRTABLE_API_KEY 2>/dev/null)\"; [ -n \"$KEY\" ] || { echo 'AIRTABLE_API_KEY did not resolve. Register it in Infisical, then run /add-secret. See .mcp.json.disabled for the full note.' >&2; exit 1; }; AIRTABLE_API_KEY=\"$KEY\" exec npx -y airtable-mcp-server"
+      ]
+    }
+  }
+}

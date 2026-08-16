@@ -1,0 +1,45 @@
+{
+  "name": "McCoshen & Ross",
+  "slug": "mccoshen-ross",
+  "mediaIdPrefix": "HAN",
+  "ingest": {
+    "url": "https://mmingest.pbswi.wisc.edu/HereNow/",
+    "episodePattern": "^HAN\\d{4}MCROSS$",
+    "artifacts": {
+      ".wav": { "dest": "audio", "required": true },
+      ".srt": { "dest": "captions" },
+      ".scc": { "dest": "captions" }
+    },
+    "note": "Shares the Here & Now ingest with every other HAN segment, so the pattern is deliberately narrow. 6HNS<date>McRoss<n> is a separate short-form cut, not this podcast. No .txt is delivered for this show. Older seasons are filed into '<season> season/' subfolders; current-season episodes sit at the root."
+  },
+  "episodes": {
+    "localPath": "shows/mccoshen-ross/episodes",
+    "subdirs": {
+      "audio": "audio"
+    }
+  },
+  "stitch": {
+    "output": "{episode}.mp3",
+    "encode": {
+      "bitrate": "192k",
+      "sampleRate": 44100
+    },
+    "segments": [
+      {
+        "id": "intro",
+        "source": "asset",
+        "file": "assets/audio/MCROSS_INTRO.wav"
+      },
+      {
+        "id": "program",
+        "source": "episode",
+        "match": "mcross"
+      },
+      {
+        "id": "outro",
+        "source": "asset",
+        "file": "assets/audio/MCROSS_OUTRO.wav"
+      }
+    ]
+  }
+}

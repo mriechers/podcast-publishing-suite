@@ -1,0 +1,30 @@
+.DS_Store
+._*
+
+# Claude Code local state. The slash commands are the deliberate exception --
+# CLAUDE.md records /wc-episode-art being lost because it lived only in
+# ~/.claude/skills/ and was never version-controlled.
+.claude/*
+!.claude/commands/
+
+# Show identity packages: track the structural definitions, never the media.
+# This is an allowlist on purpose -- only the three named files are tracked, so
+# a stray .wav dropped anywhere in a show folder cannot reach GitHub by
+# accident. assets/ and episodes/ hold production audio, artwork, and
+# per-episode working files.
+shows/*
+!shows/README.md
+!shows/*/
+shows/*/*
+!shows/*/config.json
+!shows/*/brand.json
+!shows/*/glossary.json
+
+images/
+reference/
+
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
