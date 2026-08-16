@@ -1,0 +1,17 @@
+# Shell aliases for PRX-to-Ghost Publisher
+# Add to ~/.zshrc or ~/.bashrc with:
+#   source ~/Developer/ghost-dev/prx-to-ghost-publisher/.shell-aliases
+
+# Quick sync commands
+alias prx-sync='cd ~/Developer/ghost-dev/prx-to-ghost-publisher && ./sync_feeds.sh'
+alias prx-sync-dry='cd ~/Developer/ghost-dev/prx-to-ghost-publisher && ./sync_feeds.sh --dry-run'
+alias prx-sync-test='cd ~/Developer/ghost-dev/prx-to-ghost-publisher && ./sync_feeds.sh --dry-run --limit 1'
+alias prx-sync-one='cd ~/Developer/ghost-dev/prx-to-ghost-publisher && ./sync_feeds.sh --limit 1'
+alias prx-sync-full='cd ~/Developer/ghost-dev/prx-to-ghost-publisher && ./sync_feeds.sh --full'
+
+# Project navigation
+alias prx='cd ~/Developer/ghost-dev/prx-to-ghost-publisher'
+
+# Utility commands
+alias prx-status='cd ~/Developer/ghost-dev/prx-to-ghost-publisher && python3 -m src.main list'
+alias prx-test='cd ~/Developer/ghost-dev/prx-to-ghost-publisher && python3 -m src.main test-prx-connection'

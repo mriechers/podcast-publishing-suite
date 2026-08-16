@@ -1,0 +1,12 @@
+.env.prod
+.env.dev
+.venv/
+__pycache__/
+*.egg-info/
+data/ghost/*.json
+data/prx/*.json
+data/prx/downloads/*.json
+data/prx/PRX Data - */
+data/spotify/*.json
+!data/.gitkeep
+dist/

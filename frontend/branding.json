@@ -1,0 +1,11 @@
+{
+  "appName": "Podcast Publishing Suite",
+  "appVersion": "0.1.0",
+  "orgName": "Wonder Cabinet Productions",
+  "logoUrl": "/favicon.svg",
+  "colors": {
+    "primary": "#3b82f6",
+    "secondary": "#8b5cf6"
+  },
+  "storageKey": "podcast-suite-preferences"
+}

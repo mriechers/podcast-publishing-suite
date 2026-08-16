@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Wonder Cabinet — Episode Art Builder</title>
+<link rel="icon" href="wc-logo.png" type="image/png">
+<script src="https://cdn.jsdelivr.net/npm/exifr@7/dist/full.umd.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a1a; color: #eee; font-family: system-ui, -apple-system, sans-serif; padding: 1.5rem 2rem; }
+
+  /* ── Header ─────────────────────────────────── */
+  .header { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1.5rem; }
+  .header img { height: 48px; width: auto; }
+  .header div { display: flex; flex-direction: column; }
+  h1 { font-size: 1.5rem; line-height: 1.2; }
+  .subtitle { color: #999; font-size: 0.8rem; margin-top: 0.15rem; }
+
+  /* ── Layout ─────────────────────────────────── */
+  .builder { display: flex; gap: 2rem; max-width: 1500px; margin: 0 auto 1.5rem; align-items: flex-start; }
+  .preview-col { flex: 0 0 420px; position: sticky; top: 1.5rem; }
+  .picker { flex: 1; min-width: 0; }
+
+  /* ── Preview frame ──────────────────────────── */
+  .preview-frame { width: 400px; height: 400px; background: #10a544; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; padding: 3px; border-radius: 8px; }
+  .slot { background: #000; overflow: hidden; position: relative; cursor: pointer; border-radius: 3px; user-select: none; }
+  .slot#slot-tl { grid-column: 1; grid-row: 1; }
+  .slot#slot-bl { grid-column: 1; grid-row: 2; }
+  .slot#slot-right { grid-column: 2; grid-row: 1 / 3; }
+  .slot .slot-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #555; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; pointer-events: none; }
+  .slot.has-image .slot-label { display: none; }
+  .slot.active-target { outline: 2px solid #fff; outline-offset: -2px; z-index: 1; }
+  .slot canvas { width: 100%; height: 100%; display: block; }
+
+  /* ── Slot selector ──────────────────────────── */
+  .slot-controls { margin-top: 0.6rem; display: flex; gap: 0.4rem; }
+  .slot-btn { flex: 1; padding: 0.4rem 0.2rem; border: 2px solid #444; border-radius: 6px; background: #222; color: #ccc; cursor: pointer; font-size: 0.7rem; text-align: center; transition: all 0.15s; }
+  .slot-btn:hover { border-color: #888; }
+  .slot-btn.active { border-color: #10a544; color: #10a544; background: #1a2e1f; }
+
+  /* ── Panel: generic ─────────────────────────── */
+  .panel { margin-top: 0.6rem; background: #222; border-radius: 8px; padding: 0.7rem; }
+  .panel h3 { font-size: 0.75rem; color: #10a544; margin-bottom: 0.4rem; }
+  .panel .hint { font-size: 0.65rem; color: #666; margin-bottom: 0.4rem; }
+
+  /* ── Reposition controls ────────────────────── */
+  .zoom-row { display: flex; align-items: center; gap: 0.5rem; }
+  .zoom-row label { font-size: 0.7rem; color: #aaa; min-width: 35px; }
+  .zoom-row input[type="range"] { flex: 1; accent-color: #10a544; }
+  .zoom-row .zoom-val { font-size: 0.7rem; color: #ccc; min-width: 32px; text-align: right; }
+  .reset-btn { margin-top: 0.4rem; padding: 0.25rem 0.6rem; background: #333; border: 1px solid #555; color: #ccc; border-radius: 4px; font-size: 0.65rem; cursor: pointer; }
+  .reset-btn:hover { background: #444; }
+
+  /* ── Export controls ─────────────────────────── */
+  .export-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
+  .export-row label { font-size: 0.7rem; color: #aaa; min-width: 50px; }
+  .export-row input[type="text"] { flex: 1; background: #1a1a1a; border: 1px solid #444; color: #eee; padding: 0.25rem 0.4rem; border-radius: 4px; font-size: 0.7rem; font-family: monospace; }
+  .export-row input[type="range"] { flex: 1; accent-color: #10a544; }
+  .export-row .val { font-size: 0.7rem; color: #ccc; min-width: 28px; text-align: right; }
+  .export-btn { margin-top: 0.4rem; width: 100%; padding: 0.5rem; background: #10a544; color: #fff; border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; }
+  .export-btn:hover { background: #0d8a38; }
+  .export-btn:disabled { background: #333; color: #666; cursor: default; }
+  .export-status { font-size: 0.65rem; color: #888; margin-top: 0.25rem; text-align: center; min-height: 1em; }
+
+  /* ── Credits display ────────────────────────── */
+  .credit-line { color: #aaa; font-size: 0.7rem; line-height: 1.5; }
+  .credit-line a { color: #10a544; text-decoration: none; }
+
+  /* ── Credits markdown preview ────────────────── */
+  .credits-md { position: relative; margin-top: 0.5rem; }
+  .credits-md pre { background: #111; color: #aaa; font-size: 0.6rem; line-height: 1.5; padding: 0.6rem 0.6rem 0.6rem; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; max-height: 220px; overflow-y: auto; font-family: 'SF Mono', Monaco, 'Courier New', monospace; margin: 0; }
+  .credits-md .copy-btn { position: absolute; top: 0.3rem; right: 0.3rem; padding: 0.2rem 0.5rem; background: #333; border: 1px solid #555; color: #ccc; border-radius: 3px; font-size: 0.6rem; cursor: pointer; transition: all 0.15s; z-index: 1; }
+  .credits-md .copy-btn:hover { background: #444; border-color: #10a544; color: #10a544; }
+  .credits-md .copy-btn.copied { background: #10a544; color: #fff; border-color: #10a544; }
+
+  /* ── Saved combos ───────────────────────────── */
+  .saved-row { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.4rem; }
+  .saved-mini { width: 72px; cursor: pointer; position: relative; }
+  .saved-mini:hover { transform: scale(1.05); }
+  .saved-mini .mini-grid { width: 72px; height: 72px; background: #10a544; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 1px; padding: 1px; border-radius: 3px; }
+  .saved-mini .mini-grid img { width: 100%; height: 100%; object-fit: cover; }
+  .saved-mini .mini-grid .tl { grid-column: 1; grid-row: 1; }
+  .saved-mini .mini-grid .bl { grid-column: 1; grid-row: 2; }
+  .saved-mini .mini-grid .rt { grid-column: 2; grid-row: 1 / 3; }
+  .saved-mini .mini-label { font-size: 0.5rem; color: #888; text-align: center; margin-top: 0.15rem; }
+  .saved-mini .mini-x { position: absolute; top: -4px; right: -4px; width: 14px; height: 14px; background: #e55; color: #fff; border: none; border-radius: 50%; font-size: 0.55rem; cursor: pointer; display: none; line-height: 14px; text-align: center; }
+  .saved-mini:hover .mini-x { display: block; }
+  .save-btn { padding: 0.3rem 0.6rem; background: #333; border: 1px solid #10a544; color: #10a544; border-radius: 4px; font-size: 0.65rem; cursor: pointer; }
+  .save-btn:hover { background: #1a2e1f; }
+  .save-btn:disabled { border-color: #444; color: #555; cursor: default; background: #222; }
+
+  /* ── Picker tabs ────────────────────────────── */
+  .picker-tabs { display: flex; gap: 0; margin-bottom: 1rem; border-bottom: 2px solid #333; }
+  .picker-tab { padding: 0.5rem 1.25rem; background: transparent; border: none; color: #888; font-size: 0.85rem; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; }
+  .picker-tab:hover { color: #ccc; }
+  .picker-tab.active { color: #10a544; border-bottom-color: #10a544; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ── Unsplash search ────────────────────────── */
+  .search-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+  .search-bar input { flex: 1; background: #222; border: 1px solid #444; color: #eee; padding: 0.5rem 0.75rem; border-radius: 6px; font-size: 0.85rem; }
+  .search-bar input:focus { outline: none; border-color: #10a544; }
+  .search-bar button { padding: 0.5rem 1rem; background: #10a544; color: #fff; border: none; border-radius: 6px; font-size: 0.85rem; cursor: pointer; font-weight: 600; }
+  .search-bar button:hover { background: #0d8a38; }
+  .search-bar button:disabled { background: #333; color: #666; }
+  .search-status { font-size: 0.7rem; color: #888; margin-bottom: 0.75rem; min-height: 1em; }
+  .search-results { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .search-empty { color: #555; font-size: 0.8rem; padding: 2rem; text-align: center; }
+
+  /* ── Upload zone ────────────────────────────── */
+  .drop-zone { border: 2px dashed #444; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 1rem; }
+  .drop-zone:hover, .drop-zone.dragover { border-color: #10a544; background: #1a2e1f; }
+  .drop-zone p { color: #888; font-size: 0.85rem; }
+  .drop-zone .drop-hint { color: #555; font-size: 0.7rem; margin-top: 0.4rem; }
+  .drop-zone input[type="file"] { display: none; }
+
+  /* ── Credit edit form ───────────────────────── */
+  .credit-form { background: #2a2a2a; border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem; border: 1px solid #10a544; }
+  .credit-form h4 { font-size: 0.8rem; color: #10a544; margin-bottom: 0.5rem; }
+  .credit-form .form-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; }
+  .credit-form .form-row label { font-size: 0.7rem; color: #aaa; min-width: 75px; }
+  .credit-form .form-row input, .credit-form .form-row select { flex: 1; background: #1a1a1a; border: 1px solid #444; color: #eee; padding: 0.25rem 0.4rem; border-radius: 4px; font-size: 0.7rem; }
+  .credit-form .form-row select { cursor: pointer; }
+  .credit-form .form-actions { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+  .credit-form .form-actions button { padding: 0.3rem 0.75rem; border-radius: 4px; font-size: 0.7rem; cursor: pointer; border: none; }
+  .credit-form .form-actions .btn-add { background: #10a544; color: #fff; }
+  .credit-form .form-actions .btn-cancel { background: #444; color: #ccc; }
+
+  /* ── Source cards (shared) ───────────────────── */
+  .source-pool { margin-top: 1rem; }
+  .source-pool h3 { font-size: 0.85rem; color: #10a544; margin-bottom: 0.5rem; border-bottom: 1px solid #333; padding-bottom: 0.3rem; }
+  .source-cards { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .source-card { width: 140px; cursor: pointer; transition: transform 0.15s; position: relative; }
+  .source-card:hover { transform: scale(1.04); }
+  .source-card img { width: 140px; height: 140px; object-fit: cover; border-radius: 6px; border: 2px solid transparent; transition: border-color 0.15s; }
+  .source-card:hover img { border-color: #10a544; }
+  .source-card .code { font-size: 0.7rem; font-weight: 700; color: #ccc; text-align: center; margin-top: 0.2rem; }
+  .source-card .credit { font-size: 0.55rem; color: #888; text-align: center; line-height: 1.3; margin-top: 0.1rem; }
+  .source-card .credit a { color: #10a544; text-decoration: none; }
+  .source-card .card-remove { position: absolute; top: -4px; right: -4px; width: 18px; height: 18px; background: #e55; color: #fff; border: none; border-radius: 50%; font-size: 0.65rem; cursor: pointer; display: none; line-height: 18px; text-align: center; }
+  .source-card:hover .card-remove { display: block; }
+  .source-card .card-edit { position: absolute; top: -4px; left: -4px; width: 18px; height: 18px; background: #4a90d9; color: #fff; border: none; border-radius: 50%; font-size: 0.6rem; cursor: pointer; display: none; line-height: 18px; text-align: center; }
+  .source-card:hover .card-edit { display: block; }
+
+  /* ── Lightbox ────────────────────────────────── */
+  .lightbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
+  .lightbox.active { display: flex; }
+  .lightbox img { max-width: 90vw; max-height: 85vh; border-radius: 8px; }
+  .lightbox .caption { color: #ccc; font-size: 0.85rem; margin-top: 0.75rem; text-align: center; }
+  .lightbox .close { position: absolute; top: 1rem; right: 1.5rem; font-size: 2rem; color: #fff; cursor: pointer; }
+
+  /* ── Footer ──────────────────────────────────── */
+  .footer { display: flex; align-items: center; justify-content: center; gap: 1.5rem; margin-top: 1.5rem; padding-top: 0.75rem; border-top: 1px solid #222; }
+  .footer-brand { display: flex; align-items: center; gap: 0.4rem; }
+  .footer-brand img { height: 24px; opacity: 0.3; }
+  .footer-brand span { font-size: 0.6rem; color: #444; }
+  .footer-divider { color: #333; font-size: 0.7rem; }
+  .footer-credit { display: flex; align-items: center; gap: 0.4rem; }
+  .footer-credit img { height: 22px; border-radius: 50%; opacity: 0.5; filter: invert(1); }
+  .footer-credit a { font-size: 0.6rem; color: #555; text-decoration: none; }
+  .footer-credit a:hover { color: #10a544; }
+  .instructions { text-align: center; color: #555; font-size: 0.65rem; margin-top: 0.75rem; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+
+<div class="header">
+  <img src="wc-logo.png" alt="Wonder Cabinet">
+  <div>
+    <h1>Episode Art Builder</h1>
+    <p class="subtitle">Select a slot, add images, drag to reposition, export at full resolution</p>
+  </div>
+</div>
+
+<div class="builder">
+  <!-- ── Left column: preview + controls ──────── -->
+  <div class="preview-col">
+    <div class="preview-frame" id="preview">
+      <div class="slot active-target" id="slot-tl" onclick="setActiveSlot('tl')"><span class="slot-label">Top Left</span></div>
+      <div class="slot" id="slot-right" onclick="setActiveSlot('right')"><span class="slot-label">Right (portrait)</span></div>
+      <div class="slot" id="slot-bl" onclick="setActiveSlot('bl')"><span class="slot-label">Bottom Left</span></div>
+    </div>
+
+    <div class="slot-controls">
+      <div class="slot-btn active" id="btn-tl" onclick="setActiveSlot('tl')">Top Left</div>
+      <div class="slot-btn" id="btn-bl" onclick="setActiveSlot('bl')">Bottom Left</div>
+      <div class="slot-btn" id="btn-right" onclick="setActiveSlot('right')">Right</div>
+    </div>
+
+    <div class="panel">
+      <h3>Adjust Position</h3>
+      <p class="hint">Drag inside the frame to reposition.</p>
+      <div class="zoom-row">
+        <label>Zoom</label>
+        <input type="range" id="zoomSlider" min="100" max="200" value="100" oninput="onZoom()">
+        <span class="zoom-val" id="zoomVal">100%</span>
+      </div>
+      <button class="reset-btn" onclick="resetPosition()">Reset position</button>
+    </div>
+
+    <div class="panel">
+      <h3>Export</h3>
+      <div class="export-row">
+        <label>Filename</label>
+        <input type="text" id="exportName" value="episode-art.jpg">
+      </div>
+      <div class="export-row">
+        <label>Quality</label>
+        <input type="range" id="qualitySlider" min="60" max="100" value="92" oninput="document.getElementById('qualityVal').textContent=this.value+'%'">
+        <span class="val" id="qualityVal">92%</span>
+      </div>
+      <button class="export-btn" id="exportBtn" onclick="exportImage()" disabled>Export 3000 &times; 3000</button>
+      <button class="export-btn" id="exportCreditsBtn" onclick="exportCredits()" disabled style="background:#333;color:#10a544;border:1px solid #10a544;margin-top:0.3rem;">Export credits.md</button>
+      <button class="export-btn" id="saveToEpisodeBtn" onclick="saveToEpisodeFolder()" disabled style="display:none;background:#0d7a32;color:#fff;margin-top:0.5rem;border:1px solid #10a544;">Save to episode folder</button>
+      <div class="export-status" id="exportStatus"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Credits</h3>
+      <div id="creditLines"><span class="credit-line">Add images to see credits.</span></div>
+      <div class="credits-md" id="creditsMdWrap" style="display:none">
+        <button class="copy-btn" id="copyBtn" onclick="copyCredits()">Copy</button>
+        <pre id="creditsMdPre"></pre>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Saved Combinations</h3>
+      <div class="saved-row" id="savedRow"></div>
+      <button class="save-btn" id="saveBtn" onclick="saveCombo()" disabled>Save this combo</button>
+    </div>
+  </div>
+
+  <!-- ── Right column: source picker ──────────── -->
+  <div class="picker">
+    <div class="picker-tabs">
+      <button class="picker-tab" onclick="switchTab('search')">Unsplash Search</button>
+      <button class="picker-tab active" onclick="switchTab('upload')">Upload Images</button>
+    </div>
+
+    <!-- Unsplash search tab -->
+    <div class="tab-content" id="tab-search">
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search Unsplash... e.g. 'ammonite fossil'" onkeydown="if(event.key==='Enter')searchUnsplash()">
+        <button onclick="searchUnsplash()" id="searchBtn">Search</button>
+      </div>
+      <div class="search-status" id="searchStatus"></div>
+      <div class="search-results" id="searchResults">
+        <p class="search-empty" id="searchEmpty">Enter a search term to find images on Unsplash.</p>
+      </div>
+      <button id="loadMoreBtn" style="display:none;margin:1rem auto;padding:0.4rem 1rem;background:#333;border:1px solid #555;color:#ccc;border-radius:4px;font-size:0.75rem;cursor:pointer;" onclick="loadMore()">Load more results</button>
+    </div>
+
+    <!-- Upload tab -->
+    <div class="tab-content" id="tab-upload">
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <p>Drop images here or click to browse</p>
+        <p class="drop-hint">JPG, PNG, WebP. Unsplash filenames auto-detected for credits.</p>
+        <input type="file" id="fileInput" accept="image/*" multiple onchange="handleFiles(this.files)">
+      </div>
+      <div id="creditFormArea"></div>
+    </div>
+
+    <!-- Source pool (shared across tabs) -->
+    <div class="source-pool" id="sourcePool" style="display:none">
+      <h3>Your Images <span id="poolCount" style="color:#888;font-weight:400"></span></h3>
+      <div class="source-cards" id="poolCards"></div>
+    </div>
+  </div>
+</div>
+
+<p class="instructions">
+  Search Unsplash or upload your own images. Click a source to place it in the active slot.
+  Drag to reposition. Export downloads a production-ready 3000&times;3000 JPEG.
+</p>
+
+<div class="footer">
+  <div class="footer-brand">
+    <img src="wc-wordmark.png" alt="Wonder Cabinet">
+    <span>Episode Art Builder</span>
+  </div>
+  <span class="footer-divider">|</span>
+  <div class="footer-credit">
+    <img src="mark-logo.png" alt="Mark Riechers">
+    <a href="https://bymarkriechers.com" target="_blank">Built by Mark Riechers</a>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <span class="close">&times;</span>
+  <img id="lightbox-img" src="" alt="Full size preview">
+  <p class="caption" id="lightbox-caption"></p>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════
+// LAYOUT CONSTANTS
+// ══════════════════════════════════════════════════
+const CANVAS_SIZE = 3000;
+const GREEN = '#10a544';
+const BLACK = '#000000';
+const OUTER = 25, PAD = 30, GUTTER = 26;
+const IMG_W = 1402, LEFT_H = 1402, RIGHT_H = 2890;
+const TL_X = OUTER, TL_Y = OUTER;
+const BL_X = OUTER, BL_Y = OUTER + LEFT_H + 2*PAD + GUTTER;
+const RT_X = OUTER + IMG_W + 2*PAD + GUTTER, RT_Y = OUTER;
+
+// ══════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════
+let activeSlot = 'tl';
+const slotData = {
+  tl:    { img: null, code: null, credit: null, url: null, panX: 0.5, panY: 0.5, zoom: 1.0, targetW: IMG_W, targetH: LEFT_H, sourceId: null },
+  bl:    { img: null, code: null, credit: null, url: null, panX: 0.5, panY: 0.5, zoom: 1.0, targetW: IMG_W, targetH: LEFT_H, sourceId: null },
+  right: { img: null, code: null, credit: null, url: null, panX: 0.5, panY: 0.0, zoom: 1.0, targetW: IMG_W, targetH: RIGHT_H, sourceId: null }
+};
+const savedCombos = [];
+const sourcePool = []; // { id, img, thumbUrl, fullUrl, code, credit, url, source }
+let nextSourceId = 1;
+let searchPage = 1;
+let lastQuery = '';
+
+// ══════════════════════════════════════════════════
+// UNSPLASH API — proxied through Cloudflare Pages Function
+// ══════════════════════════════════════════════════
+const UNSPLASH_PROXY = '/api/unsplash';
+
+// ══════════════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.picker-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector('[onclick*="switchTab(\'' + tab + '\')"]').classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// ══════════════════════════════════════════════════
+// UNSPLASH SEARCH
+// ══════════════════════════════════════════════════
+async function searchUnsplash() {
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query) return;
+
+  lastQuery = query;
+  searchPage = 1;
+  document.getElementById('searchBtn').disabled = true;
+  document.getElementById('searchStatus').textContent = 'Searching...';
+  document.getElementById('searchResults').innerHTML = '';
+  const emptyEl = document.getElementById('searchEmpty');
+  if (emptyEl) emptyEl.style.display = 'none';
+
+  await fetchUnsplashPage(query, 1);
+  document.getElementById('searchBtn').disabled = false;
+}
+
+async function loadMore() {
+  searchPage++;
+  await fetchUnsplashPage(lastQuery, searchPage);
+}
+
+async function fetchUnsplashPage(query, page) {
+  try {
+    const resp = await fetch(
+      UNSPLASH_PROXY + '?action=search&query=' + encodeURIComponent(query) +
+      '&page=' + page + '&per_page=20&orientation=squarish'
+    );
+    if (!resp.ok) {
+      const err = await resp.text();
+      document.getElementById('searchStatus').textContent = 'Error: ' + resp.status;
+      return;
+    }
+    const data = await resp.json();
+    const total = data.total;
+    document.getElementById('searchStatus').textContent =
+      total + ' results for "' + query + '"' + (total > page * 20 ? ' \u2014 showing ' + Math.min(page * 20, total) : '');
+
+    const container = document.getElementById('searchResults');
+    data.results.forEach(photo => {
+      const card = createUnsplashCard(photo);
+      container.appendChild(card);
+    });
+
+    document.getElementById('loadMoreBtn').style.display = (total > page * 20) ? 'block' : 'none';
+  } catch (e) {
+    document.getElementById('searchStatus').textContent = 'Network error: ' + e.message;
+  }
+}
+
+function createUnsplashCard(photo) {
+  const card = document.createElement('div');
+  card.className = 'source-card';
+  card.style.cursor = 'pointer';
+
+  const img = document.createElement('img');
+  img.src = photo.urls.small;
+  img.alt = photo.alt_description || photo.description || 'Unsplash photo';
+  img.loading = 'lazy';
+  card.appendChild(img);
+
+  const code = document.createElement('div');
+  code.className = 'code';
+  code.textContent = photo.user.name;
+  card.appendChild(code);
+
+  const credit = document.createElement('div');
+  credit.className = 'credit';
+  credit.appendChild(document.createTextNode('Photo by '));
+  const nameLink = document.createElement('a');
+  nameLink.href = photo.user.links.html + '?utm_source=wonder_cabinet_art_builder&utm_medium=referral';
+  nameLink.target = '_blank';
+  nameLink.textContent = photo.user.name;
+  nameLink.onclick = e => e.stopPropagation();
+  credit.appendChild(nameLink);
+  credit.appendChild(document.createTextNode(' on '));
+  const unsplashLink = document.createElement('a');
+  unsplashLink.href = 'https://unsplash.com/?utm_source=wonder_cabinet_art_builder&utm_medium=referral';
+  unsplashLink.target = '_blank';
+  unsplashLink.textContent = 'Unsplash';
+  unsplashLink.onclick = e => e.stopPropagation();
+  credit.appendChild(unsplashLink);
+  card.appendChild(credit);
+
+  // Click to add to pool
+  card.onclick = () => addUnsplashToPool(photo);
+
+  // Right-click for lightbox
+  card.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    document.getElementById('lightbox-img').src = photo.urls.regular;
+    document.getElementById('lightbox-caption').textContent =
+      'Photo by ' + photo.user.name + ' on Unsplash';
+    document.getElementById('lightbox').classList.add('active');
+  });
+
+  return card;
+}
+
+function addUnsplashToPool(photo) {
+  // Check if already in pool
+  if (sourcePool.find(s => s.unsplashId === photo.id)) return;
+
+  const entry = {
+    id: nextSourceId++,
+    unsplashId: photo.id,
+    thumbUrl: photo.urls.small,
+    fullUrl: photo.urls.full,
+    code: 'U' + (sourcePool.filter(s => s.source === 'unsplash').length + 1),
+    credit: 'Photo by ' + photo.user.name + ' on Unsplash',
+    photographer: photo.user.name,
+    photographerUrl: photo.user.links.html + '?utm_source=wonder_cabinet_art_builder&utm_medium=referral',
+    url: photo.links.html + '?utm_source=wonder_cabinet_art_builder&utm_medium=referral',
+    source: 'unsplash',
+    downloadLocation: photo.links.download_location,
+    img: null
+  };
+
+  // Preload full image for canvas use
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => { entry.img = img; };
+  img.src = photo.urls.full;
+
+  // Also load thumb immediately
+  const thumb = new Image();
+  thumb.crossOrigin = 'anonymous';
+  thumb.onload = () => { if (!entry.img) entry.img = thumb; };
+  thumb.src = photo.urls.small;
+
+  sourcePool.push(entry);
+  renderPool();
+
+  // Trigger Unsplash download tracking (required by API guidelines)
+  if (photo.links.download_location) {
+    fetch(UNSPLASH_PROXY + '?action=track-download&url=' + encodeURIComponent(photo.links.download_location)).catch(() => {});
+  }
+}
+
+// ══════════════════════════════════════════════════
+// FILE UPLOAD
+// ══════════════════════════════════════════════════
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+});
+
+async function handleFiles(files) {
+  for (const file of Array.from(files)) {
+    if (!file.type.startsWith('image/')) continue;
+
+    // Read file as data URL
+    const dataUrl = await new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
+
+    // 1. Check filename for composite pattern FIRST (composite-A+B.jpg) — must run before the
+    //    greedy Unsplash regex, which would otherwise swallow `composite-X-...-unsplash.jpg`
+    //    as a single source and miss the multi-source signal.
+    const composite = parseCompositeFilename(file.name);
+    if (composite) {
+      const meta = await extractImageCredits(file);
+      meta.photographer = composite.map(s => s.photographer).join(' & ');
+      meta.source = 'other';
+      meta.sourceLabel = 'Unsplash composite';
+      meta.isComposite = true;
+      meta.compositeSources = composite;
+      showCreditForm(dataUrl, file.name, meta);
+      continue;
+    }
+
+    // 2. Check filename for single Unsplash pattern
+    const unsplash = parseUnsplashFilename(file.name);
+    if (unsplash) {
+      addUploadToPool(dataUrl, file.name, unsplash.photographer, unsplash.url, 'unsplash');
+      continue;
+    }
+
+    // 3. Try to extract credit metadata from EXIF/IPTC/XMP (also detects editor tool)
+    const meta = await extractImageCredits(file);
+
+    if (meta.photographer) {
+      // Auto-detected credits from metadata — pre-fill and confirm
+      showCreditForm(dataUrl, file.name, meta);
+    } else {
+      // No metadata photographer — show form (with editor warning if applicable)
+      showCreditForm(dataUrl, file.name, meta.editorTool ? meta : undefined);
+    }
+  }
+}
+
+async function extractImageCredits(file) {
+  const meta = { photographer: null, copyright: null, source: null, url: null, editorTool: null };
+  try {
+    if (typeof exifr === 'undefined') return meta;
+
+    const data = await exifr.parse(file, {
+      // EXIF tags
+      exif: { pick: ['Artist', 'Copyright', 'ImageDescription', 'Software'] },
+      // IPTC tags
+      iptc: { pick: ['Byline', 'Credit', 'Source', 'CopyrightNotice', 'Caption'] },
+      // XMP tags
+      xmp: { pick: ['creator', 'rights', 'credit', 'source', 'description', 'CreatorTool'] },
+      // Also try these common namespaces
+      icc: false,
+      jfif: false,
+      ihdr: false
+    });
+
+    // Detect image editor via XMP CreatorTool / EXIF Software (run even if data is otherwise empty)
+    const toolStr = ((data && (data.CreatorTool || data.Software)) || '').toString();
+    if (/Adobe Photoshop|Pixelmator|Affinity (Photo|Designer)|Adobe Lightroom|GIMP|Procreate/i.test(toolStr)) {
+      meta.editorTool = toolStr;
+    } else if (!toolStr) {
+      // Fallback: scan first 64KB of the file for editor markers (some saves don't expose CreatorTool via exifr)
+      try {
+        const head = await file.slice(0, 65536).text();
+        const m = head.match(/Adobe Photoshop[^\s"<]*|Pixelmator[^\s"<]*|Affinity (Photo|Designer)[^\s"<]*|Adobe Lightroom[^\s"<]*|GIMP[^\s"<]*|Procreate[^\s"<]*/);
+        if (m) meta.editorTool = m[0];
+      } catch (_) { /* binary slice fallback failed — non-fatal */ }
+    }
+
+    if (!data) return meta;
+
+    // Extract photographer name (priority order)
+    meta.photographer =
+      data.Byline ||           // IPTC By-line
+      data.Artist ||           // EXIF Artist
+      data.Credit ||           // IPTC Credit
+      data.creator ||          // XMP dc:creator
+      (Array.isArray(data.creator) ? data.creator[0] : null) ||
+      null;
+
+    // Extract copyright
+    meta.copyright =
+      data.CopyrightNotice ||  // IPTC
+      data.Copyright ||        // EXIF
+      data.rights ||           // XMP
+      null;
+
+    // Try to detect source
+    const allText = JSON.stringify(data).toLowerCase();
+    if (allText.includes('unsplash')) {
+      meta.source = 'unsplash';
+    } else if (allText.includes('getty')) {
+      meta.source = 'Getty Images';
+    } else if (allText.includes('shutterstock')) {
+      meta.source = 'Shutterstock';
+    }
+
+    // Extract URL if present in description or source fields
+    const urlMatch = (data.Source || data.source || data.ImageDescription || data.description || '')
+      .toString().match(/https?:\/\/[^\s"]+/);
+    if (urlMatch) meta.url = urlMatch[0];
+
+  } catch (e) {
+    // Silently fail — metadata extraction is best-effort
+    console.warn('EXIF parse error:', e);
+  }
+  return meta;
+}
+
+function parseUnsplashFilename(name) {
+  // Pattern: photographer-name-PHOTOID-unsplash.ext or with OS duplicate suffix like (1)
+  const match = name.match(/^(.+)-([a-zA-Z0-9_-]+)-unsplash(?:\s*\(\d+\))?\.\w+$/);
+  if (!match) return null;
+  const photographer = match[1].split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const photoId = match[2];
+  return {
+    photographer,
+    photoId,
+    url: 'https://unsplash.com/photos/' + photoId
+  };
+}
+
+function parseCompositeFilename(name) {
+  // Pattern: composite-{slug1}-{ID1}-unsplash+{slug2}-{ID2}-unsplash.ext
+  // Each + -separated segment must independently look like an Unsplash filename.
+  if (!/^composite-/i.test(name)) return null;
+  const ext = (name.match(/\.\w+$/) || [''])[0];
+  const stripped = name.replace(/^composite-/i, '').replace(/\.\w+$/, '');
+  const parts = stripped.split('+');
+  if (parts.length < 2) return null;
+  const sources = [];
+  for (const part of parts) {
+    const u = parseUnsplashFilename(part + ext);
+    if (u) sources.push(u);
+  }
+  return sources.length >= 2 ? sources : null;
+}
+
+function showCreditForm(dataUrl, filename, meta) {
+  meta = meta || {};
+  const area = document.getElementById('creditFormArea');
+  const form = document.createElement('div');
+  form.className = 'credit-form';
+
+  const thumbImg = document.createElement('img');
+  thumbImg.src = dataUrl;
+  thumbImg.style.cssText = 'width:60px;height:60px;object-fit:cover;border-radius:4px;float:left;margin-right:0.75rem;';
+  form.appendChild(thumbImg);
+
+  let heading;
+  let metaHint = '';
+  if (meta.isComposite) {
+    heading = 'Composite detected: ' + filename;
+    metaHint = '<div style="font-size:0.6rem;color:#10a544;margin-bottom:0.4rem;">Parsed two Unsplash sources from filename \u2014 confirm credit below' +
+      (meta.editorTool ? ' (file saved through ' + meta.editorTool.split(/[\s,]/)[0].slice(0, 30) + ')' : '') + '</div>';
+  } else if (meta.photographer) {
+    heading = 'Credits detected for: ' + filename;
+    metaHint = '<div style="font-size:0.6rem;color:#10a544;margin-bottom:0.4rem;">Auto-detected from image metadata' +
+      (meta.copyright ? ' \u2014 ' + meta.copyright : '') + '</div>';
+  } else if (meta.editorTool) {
+    heading = 'Edited file: ' + filename;
+    metaHint = '<div style="font-size:0.6rem;color:#e0a040;margin-bottom:0.4rem;">Saved through ' + meta.editorTool.slice(0, 60) + ' \u2014 if this combines multiple sources, choose Source: Other and enter the combined credit</div>';
+  } else {
+    heading = 'Add credits for: ' + filename;
+  }
+
+  // Determine default source selection
+  const sourceVal = meta.source === 'unsplash' ? 'unsplash' : (meta.source ? 'other' : 'guest');
+  const sourceLabel = meta.sourceLabel || '';
+
+  form.innerHTML +=
+    '<h4>' + heading + '</h4>' +
+    metaHint +
+    '<div class="form-row"><label>Photographer</label><input type="text" id="cf-photographer" placeholder="Name" value="' + (meta.photographer || '').replace(/"/g, '&quot;') + '"></div>' +
+    '<div class="form-row"><label>Source</label><select id="cf-source" onchange="toggleOtherSource(this)">' +
+      '<option value="unsplash"' + (sourceVal === 'unsplash' ? ' selected' : '') + '>Unsplash</option>' +
+      '<option value="guest"' + (sourceVal === 'guest' ? ' selected' : '') + '>Via guest</option>' +
+      '<option value="other"' + (sourceVal === 'other' ? ' selected' : '') + '>Other</option>' +
+    '</select></div>' +
+    '<div class="form-row" id="cf-other-row" style="display:' + (sourceVal === 'other' ? 'flex' : 'none') + ';"><label>Other source</label><input type="text" id="cf-source-label" placeholder="e.g. Allen Institute" value="' + sourceLabel.replace(/"/g, '&quot;') + '"></div>' +
+    '<div class="form-row"><label>URL (optional)</label><input type="text" id="cf-url" placeholder="https://..." value="' + (meta.url || '').replace(/"/g, '&quot;') + '"></div>' +
+    '<div class="form-actions">' +
+      '<button class="btn-add" onclick="submitCreditForm(this)">Add to pool</button>' +
+      '<button class="btn-cancel" onclick="this.closest(\'.credit-form\').remove()">Cancel</button>' +
+    '</div>';
+
+  form._dataUrl = dataUrl;
+  form._filename = filename;
+  area.appendChild(form);
+}
+
+function toggleOtherSource(sel) {
+  const row = sel.closest('.credit-form').querySelector('#cf-other-row');
+  row.style.display = (sel.value === 'other') ? 'flex' : 'none';
+}
+
+function submitCreditForm(btn) {
+  const form = btn.closest('.credit-form');
+  const photographer = form.querySelector('#cf-photographer').value.trim() || 'Unknown';
+  const sourceType = form.querySelector('#cf-source').value;
+  const sourceLabel = form.querySelector('#cf-source-label').value.trim();
+  const url = form.querySelector('#cf-url').value.trim();
+
+  addUploadToPool(form._dataUrl, form._filename, photographer, url, sourceType, sourceLabel);
+  form.remove();
+}
+
+function addUploadToPool(dataUrl, filename, photographer, url, sourceType, sourceLabel) {
+  const isUnsplash = (sourceType === 'unsplash');
+  const otherLabel = (sourceLabel || '').trim();
+  const defaultLabels = { unsplash: 'Unsplash', guest: 'via guest', other: '' };
+  const effectiveLabel = sourceType === 'other' ? otherLabel : defaultLabels[sourceType];
+  const creditText = isUnsplash
+    ? 'Photo by ' + photographer + ' on Unsplash'
+    : photographer + (effectiveLabel ? ' (' + effectiveLabel + ')' : '');
+  const entry = {
+    id: nextSourceId++,
+    thumbUrl: dataUrl,
+    fullUrl: dataUrl,
+    code: 'L' + (sourcePool.filter(s => s.source !== 'unsplash').length + 1),
+    credit: creditText,
+    photographer: photographer,
+    photographerUrl: isUnsplash && url ? url.replace(/\/photos\/.*/, '/@' + photographer.toLowerCase().replace(/\s+/g, '')) : null,
+    url: url || '',
+    source: isUnsplash ? 'unsplash' : 'local',
+    sourceType: sourceType,
+    sourceLabel: effectiveLabel,
+    filename: filename,
+    img: null
+  };
+
+  const img = new Image();
+  img.onload = () => { entry.img = img; };
+  img.src = dataUrl;
+
+  sourcePool.push(entry);
+  renderPool();
+}
+
+// ══════════════════════════════════════════════════
+// SOURCE POOL
+// ══════════════════════════════════════════════════
+function renderPool() {
+  const container = document.getElementById('poolCards');
+  const section = document.getElementById('sourcePool');
+  const count = document.getElementById('poolCount');
+
+  if (sourcePool.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = 'block';
+  count.textContent = '(' + sourcePool.length + ')';
+  container.innerHTML = '';
+
+  sourcePool.forEach(entry => {
+    const card = document.createElement('div');
+    card.className = 'source-card';
+    card.onclick = () => placeFromPool(entry.id);
+
+    const img = document.createElement('img');
+    img.src = entry.thumbUrl;
+    img.alt = entry.code;
+    card.appendChild(img);
+
+    const code = document.createElement('div');
+    code.className = 'code';
+    code.textContent = entry.code;
+    card.appendChild(code);
+
+    const credit = document.createElement('div');
+    credit.className = 'credit';
+    if (entry.source === 'unsplash') {
+      credit.appendChild(document.createTextNode('Photo by '));
+      const nameLink = document.createElement('a');
+      nameLink.href = entry.photographerUrl || entry.url;
+      nameLink.target = '_blank';
+      nameLink.textContent = entry.photographer;
+      nameLink.onclick = e => e.stopPropagation();
+      credit.appendChild(nameLink);
+      credit.appendChild(document.createTextNode(' on '));
+      const unsplashLink = document.createElement('a');
+      unsplashLink.href = 'https://unsplash.com/?utm_source=wonder_cabinet_art_builder&utm_medium=referral';
+      unsplashLink.target = '_blank';
+      unsplashLink.textContent = 'Unsplash';
+      unsplashLink.onclick = e => e.stopPropagation();
+      credit.appendChild(unsplashLink);
+    } else if (entry.url) {
+      const a = document.createElement('a');
+      a.href = entry.url;
+      a.target = '_blank';
+      a.textContent = entry.credit;
+      a.onclick = e => e.stopPropagation();
+      credit.appendChild(a);
+    } else {
+      credit.textContent = entry.credit;
+    }
+    card.appendChild(credit);
+
+    // Remove button
+    const x = document.createElement('button');
+    x.className = 'card-remove';
+    x.textContent = '\u00d7';
+    x.onclick = e => { e.stopPropagation(); removeFromPool(entry.id); };
+    card.appendChild(x);
+
+    // Right-click lightbox
+    card.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      document.getElementById('lightbox-img').src = entry.fullUrl || entry.thumbUrl;
+      document.getElementById('lightbox-caption').textContent =
+        entry.code + ' \u2014 ' + entry.credit;
+      document.getElementById('lightbox').classList.add('active');
+    });
+
+    container.appendChild(card);
+  });
+}
+
+function removeFromPool(id) {
+  const idx = sourcePool.findIndex(s => s.id === id);
+  if (idx !== -1) sourcePool.splice(idx, 1);
+  // Clear any slots using this source
+  ['tl','bl','right'].forEach(k => {
+    if (slotData[k].sourceId === id) clearSlot(k);
+  });
+  renderPool();
+}
+
+function clearSlot(k) {
+  const sd = slotData[k];
+  sd.img = null; sd.code = null; sd.credit = null; sd.url = null; sd.sourceId = null;
+  sd.panX = 0.5; sd.panY = (k === 'right') ? 0.0 : 0.5; sd.zoom = 1.0;
+  const slotEl = document.getElementById('slot-' + k);
+  slotEl.classList.remove('has-image');
+  const cvs = slotEl.querySelector('canvas');
+  if (cvs) cvs.remove();
+  updateCredits();
+  updateButtons();
+}
+
+// ══════════════════════════════════════════════════
+// SLOT MANAGEMENT
+// ══════════════════════════════════════════════════
+function setActiveSlot(slot) {
+  activeSlot = slot;
+  document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + slot).classList.add('active');
+  document.querySelectorAll('.slot').forEach(s => s.classList.remove('active-target'));
+  document.getElementById('slot-' + slot).classList.add('active-target');
+  const z = Math.round(slotData[slot].zoom * 100);
+  document.getElementById('zoomSlider').value = z;
+  document.getElementById('zoomVal').textContent = z + '%';
+}
+
+function placeFromPool(id) {
+  const entry = sourcePool.find(s => s.id === id);
+  if (!entry) return;
+
+  const waitForImage = () => {
+    if (!entry.img) { setTimeout(waitForImage, 100); return; }
+    const sd = slotData[activeSlot];
+    sd.img = entry.img;
+    sd.code = entry.code;
+    sd.credit = entry.credit;
+    sd.url = entry.url;
+    sd.sourceId = entry.id;
+    sd.panX = 0.5;
+    sd.panY = (activeSlot === 'right') ? 0.0 : 0.5;
+    sd.zoom = 1.0;
+    document.getElementById('zoomSlider').value = 100;
+    document.getElementById('zoomVal').textContent = '100%';
+    renderSlot(activeSlot);
+    updateCredits();
+    updateButtons();
+    // Auto-advance
+    if (activeSlot === 'tl' && !slotData.bl.img) setActiveSlot('bl');
+    else if (activeSlot === 'bl' && !slotData.right.img) setActiveSlot('right');
+    else if (activeSlot === 'right' && !slotData.tl.img) setActiveSlot('tl');
+  };
+  waitForImage();
+}
+
+// ══════════════════════════════════════════════════
+// CANVAS RENDERING
+// ══════════════════════════════════════════════════
+function renderSlot(slotKey) {
+  const sd = slotData[slotKey];
+  const slotEl = document.getElementById('slot-' + slotKey);
+  if (!sd.img) return;
+
+  slotEl.classList.add('has-image');
+  let cvs = slotEl.querySelector('canvas');
+  if (!cvs) {
+    cvs = document.createElement('canvas');
+    slotEl.appendChild(cvs);
+    setupDrag(slotKey, cvs);
+  }
+
+  const rect = slotEl.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  cvs.width = rect.width * dpr;
+  cvs.height = rect.height * dpr;
+  const ctx = cvs.getContext('2d');
+  drawCover(ctx, sd.img, cvs.width, cvs.height, sd.panX, sd.panY, sd.zoom, 0, 0);
+}
+
+function drawCover(ctx, img, cw, ch, panX, panY, zoom, offX, offY) {
+  const iw = img.naturalWidth, ih = img.naturalHeight;
+  const scale = Math.max(cw / iw, ch / ih) * zoom;
+  const dw = iw * scale, dh = ih * scale;
+  const ox = offX - panX * (dw - cw);
+  const oy = offY - panY * (dh - ch);
+  ctx.drawImage(img, ox, oy, dw, dh);
+}
+
+// ══════════════════════════════════════════════════
+// DRAG TO REPOSITION
+// ══════════════════════════════════════════════════
+function setupDrag(slotKey, cvs) {
+  let dragging = false, startX, startY, startPanX, startPanY;
+
+  cvs.addEventListener('mousedown', e => {
+    if (!slotData[slotKey].img) return;
+    setActiveSlot(slotKey);
+    dragging = true;
+    startX = e.clientX; startY = e.clientY;
+    startPanX = slotData[slotKey].panX;
+    startPanY = slotData[slotKey].panY;
+    cvs.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const sd = slotData[slotKey];
+    const rect = cvs.getBoundingClientRect();
+    const scale = Math.max(rect.width / sd.img.naturalWidth, rect.height / sd.img.naturalHeight) * sd.zoom;
+    const overX = sd.img.naturalWidth * scale - rect.width;
+    const overY = sd.img.naturalHeight * scale - rect.height;
+    if (overX > 0) sd.panX = Math.max(0, Math.min(1, startPanX - (e.clientX - startX) / overX));
+    if (overY > 0) sd.panY = Math.max(0, Math.min(1, startPanY - (e.clientY - startY) / overY));
+    renderSlot(slotKey);
+  });
+  window.addEventListener('mouseup', () => { if (dragging) { dragging = false; cvs.style.cursor = 'grab'; } });
+  cvs.style.cursor = 'grab';
+}
+
+function onZoom() {
+  const val = parseInt(document.getElementById('zoomSlider').value);
+  document.getElementById('zoomVal').textContent = val + '%';
+  slotData[activeSlot].zoom = val / 100;
+  renderSlot(activeSlot);
+}
+
+function resetPosition() {
+  const sd = slotData[activeSlot];
+  sd.panX = 0.5; sd.panY = (activeSlot === 'right') ? 0.0 : 0.5; sd.zoom = 1.0;
+  document.getElementById('zoomSlider').value = 100;
+  document.getElementById('zoomVal').textContent = '100%';
+  renderSlot(activeSlot);
+}
+
+// ══════════════════════════════════════════════════
+// CREDITS DISPLAY
+// ══════════════════════════════════════════════════
+function updateCredits() {
+  const lines = [];
+  [['tl','Top left'],['bl','Bottom left'],['right','Right']].forEach(([key, label]) => {
+    const s = slotData[key];
+    if (s.img) {
+      const poolEntry = sourcePool.find(p => p.id === s.sourceId);
+      const el = document.createElement('span');
+      el.className = 'credit-line';
+      const strong = document.createElement('strong');
+      strong.textContent = label + ' (' + (s.code || '?') + '): ';
+      el.appendChild(strong);
+      if (poolEntry && poolEntry.source === 'unsplash') {
+        el.appendChild(document.createTextNode('Photo by '));
+        const nameLink = document.createElement('a');
+        nameLink.href = poolEntry.photographerUrl || s.url;
+        nameLink.target = '_blank';
+        nameLink.textContent = poolEntry.photographer;
+        el.appendChild(nameLink);
+        el.appendChild(document.createTextNode(' on '));
+        const unsplashLink = document.createElement('a');
+        unsplashLink.href = 'https://unsplash.com/?utm_source=wonder_cabinet_art_builder&utm_medium=referral';
+        unsplashLink.target = '_blank';
+        unsplashLink.textContent = 'Unsplash';
+        el.appendChild(unsplashLink);
+      } else if (s.url) {
+        const a = document.createElement('a');
+        a.href = s.url;
+        a.target = '_blank';
+        a.textContent = s.credit;
+        el.appendChild(a);
+      } else {
+        el.appendChild(document.createTextNode(s.credit || 'No credit'));
+      }
+      lines.push(el);
+    }
+  });
+  const container = document.getElementById('creditLines');
+  container.innerHTML = '';
+  if (lines.length === 0) {
+    container.textContent = 'Add images to see credits.';
+  } else {
+    lines.forEach((el, i) => {
+      container.appendChild(el);
+      if (i < lines.length - 1) container.appendChild(document.createElement('br'));
+    });
+  }
+  updateCreditsPreview();
+}
+
+function updateButtons() {
+  const allFilled = slotData.tl.img && slotData.bl.img && slotData.right.img;
+  document.getElementById('exportBtn').disabled = !allFilled;
+  document.getElementById('exportCreditsBtn').disabled = !allFilled;
+  document.getElementById('saveBtn').disabled = !allFilled;
+  // saveToEpisodeBtn visibility is controlled by /config detection;
+  // its enabled state mirrors the other export buttons.
+  const saveBtn = document.getElementById('saveToEpisodeBtn');
+  if (saveBtn) saveBtn.disabled = !allFilled;
+}
+
+// ══════════════════════════════════════════════════
+// EXPORT — Full-resolution canvas
+// ══════════════════════════════════════════════════
+function exportImage() {
+  const status = document.getElementById('exportStatus');
+  status.textContent = 'Compositing at 3000\u00d73000\u2026';
+
+  requestAnimationFrame(() => {
+    try {
+      const cvs = document.createElement('canvas');
+      cvs.width = CANVAS_SIZE; cvs.height = CANVAS_SIZE;
+      const ctx = cvs.getContext('2d');
+
+      ctx.fillStyle = GREEN;
+      ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+      const panels = [
+        { key: 'tl', x: TL_X, y: TL_Y, w: IMG_W, h: LEFT_H },
+        { key: 'bl', x: BL_X, y: BL_Y, w: IMG_W, h: LEFT_H },
+        { key: 'right', x: RT_X, y: RT_Y, w: IMG_W, h: RIGHT_H }
+      ];
+
+      panels.forEach(p => {
+        const sd = slotData[p.key];
+        ctx.fillStyle = BLACK;
+        ctx.fillRect(p.x, p.y, p.w + 2*PAD, p.h + 2*PAD);
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(p.x + PAD, p.y + PAD, p.w, p.h);
+        ctx.clip();
+        drawCover(ctx, sd.img, p.w, p.h, sd.panX, sd.panY, sd.zoom, p.x + PAD, p.y + PAD);
+        ctx.restore();
+      });
+
+      const quality = parseInt(document.getElementById('qualitySlider').value) / 100;
+      cvs.toBlob(blob => {
+        if (!blob) { status.textContent = 'Export failed (CORS issue — try uploading images instead of using Unsplash URLs directly)'; return; }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = document.getElementById('exportName').value || 'episode-art.jpg';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        status.textContent = 'Exported! (' + (blob.size / 1024 / 1024).toFixed(1) + ' MB)';
+      }, 'image/jpeg', quality);
+    } catch (err) {
+      status.textContent = 'Export failed: ' + err.message;
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════
+// CREDITS MARKDOWN GENERATION
+// ══════════════════════════════════════════════════
+function generateCreditsMarkdown() {
+  const filename = document.getElementById('exportName').value || 'episode-art.jpg';
+  const panels = [];
+  const tableRows = [];
+
+  [['tl','Top left'],['bl','Bottom left'],['right','Right']].forEach(([key, label]) => {
+    const s = slotData[key];
+    const p = sourcePool.find(e => e.id === s.sourceId);
+    if (!p) return;
+
+    let creditStr, sourceStr, urlStr;
+    if (p.source === 'unsplash') {
+      creditStr = 'Photo by [' + p.photographer + '](' + (p.photographerUrl || p.url) + ') on [Unsplash](https://unsplash.com/?utm_source=wonder_cabinet_art_builder&utm_medium=referral)';
+      sourceStr = 'Unsplash';
+      urlStr = p.url || '';
+    } else {
+      creditStr = p.credit;
+      sourceStr = p.source === 'local' ? 'Uploaded' : p.source;
+      urlStr = p.url || '';
+    }
+
+    panels.push({ label, code: s.code, creditStr });
+    tableRows.push('| ' + (p.filename || s.code) + ' | ' + label + ' panel | ' + p.photographer + ' | ' + (urlStr ? '[Source](' + urlStr + ')' : sourceStr) + ' |');
+  });
+
+  if (panels.length === 0) return null;
+
+  const clockwise = [panels.find(p => p.label === 'Top left'), panels.find(p => p.label === 'Right'), panels.find(p => p.label === 'Bottom left')].filter(Boolean);
+  const captionParts = clockwise.map(p => {
+    const pe = sourcePool.find(e => e.id === slotData[p.label === 'Top left' ? 'tl' : p.label === 'Right' ? 'right' : 'bl'].sourceId);
+    if (!pe) return '';
+    if (pe.source === 'unsplash') return pe.photographer + ' (Unsplash)';
+    return pe.photographer + (pe.sourceLabel ? ' (' + pe.sourceLabel + ')' : '');
+  });
+
+  const altParts = clockwise.map(p => {
+    const slotKey = p.label === 'Top left' ? 'tl' : p.label === 'Right' ? 'right' : 'bl';
+    const pe = sourcePool.find(e => e.id === slotData[slotKey].sourceId);
+    const desc = pe ? (pe.filename || pe.photographer || p.code) : p.code;
+    return p.label.toLowerCase() + ': [describe ' + desc + ']';
+  });
+
+  return [
+    '# Image Credits \u2014 ' + filename,
+    '',
+    '## Episode Art (' + filename + ')',
+    '',
+    '**feature_image_caption:**',
+    '`CREDIT (clockwise from upper left): ' + captionParts.join(', ') + '`',
+    '',
+    '**feature_image_alt:**  ',
+    '_Edit the bracketed descriptions below:_',
+    '`Three-panel collage with green border: ' + altParts.join(', ') + '`',
+    '',
+    '## Credits',
+    '',
+    panels.map(p => '- **' + p.label + ' (' + p.code + '):** ' + p.creditStr).join('\n'),
+    '',
+    '## Source Images',
+    '',
+    '| File | Position | Credit | Source |',
+    '|------|----------|--------|--------|',
+    tableRows.join('\n'),
+    '',
+    '---',
+    '*Generated by Wonder Cabinet Episode Art Builder on ' + new Date().toISOString().split('T')[0] + '*',
+    ''
+  ].join('\n');
+}
+
+function exportCredits() {
+  const md = generateCreditsMarkdown();
+  if (!md) return;
+  const filename = document.getElementById('exportName').value || 'episode-art.jpg';
+  const blob = new Blob([md], { type: 'text/markdown' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename.replace(/\.\w+$/, '') + '-credits.md';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  document.getElementById('exportStatus').textContent = 'Credits markdown exported.';
+}
+
+// Save composite + credits directly to the episode folder via the custom server.
+// Only available when /config reports an active episode (see DOMContentLoaded init).
+async function saveToEpisodeFolder() {
+  const status = document.getElementById('exportStatus');
+  const filename = document.getElementById('exportName').value || 'episode-art.jpg';
+  status.textContent = 'Compositing at 3000×3000…';
+
+  await new Promise(resolve => requestAnimationFrame(resolve));
+
+  const cvs = document.createElement('canvas');
+  cvs.width = CANVAS_SIZE;
+  cvs.height = CANVAS_SIZE;
+  const ctx = cvs.getContext('2d');
+  ctx.fillStyle = GREEN;
+  ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+  const panels = [
+    { key: 'tl', x: TL_X, y: TL_Y, w: IMG_W, h: LEFT_H },
+    { key: 'bl', x: BL_X, y: BL_Y, w: IMG_W, h: LEFT_H },
+    { key: 'right', x: RT_X, y: RT_Y, w: IMG_W, h: RIGHT_H }
+  ];
+  panels.forEach(p => {
+    const sd = slotData[p.key];
+    ctx.fillStyle = BLACK;
+    ctx.fillRect(p.x, p.y, p.w + 2*PAD, p.h + 2*PAD);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(p.x + PAD, p.y + PAD, p.w, p.h);
+    ctx.clip();
+    drawCover(ctx, sd.img, p.w, p.h, sd.panX, sd.panY, sd.zoom, p.x + PAD, p.y + PAD);
+    ctx.restore();
+  });
+  const quality = parseInt(document.getElementById('qualitySlider').value) / 100;
+
+  const blob = await new Promise(resolve => cvs.toBlob(resolve, 'image/jpeg', quality));
+  if (!blob) {
+    status.textContent = 'Composite encode failed (CORS — try Upload Images instead of Unsplash URLs).';
+    return;
+  }
+
+  try {
+    const compositeResp = await fetch('/save/composite?filename=' + encodeURIComponent(filename), {
+      method: 'POST',
+      headers: { 'Content-Type': 'image/jpeg' },
+      body: blob
+    });
+    if (!compositeResp.ok) throw new Error('composite save: ' + compositeResp.status);
+
+    const md = generateCreditsMarkdown() || '';
+    // Pair credits with the composite filename so multiple options each get
+    // their own _credits.md (e.g., WC_S01_13_Sharon_Blackie_optionA_credits.md)
+    // instead of overwriting a single credits.md on each save.
+    const creditsResp = await fetch('/save/credits?filename=' + encodeURIComponent(filename), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/markdown' },
+      body: md
+    });
+    if (!creditsResp.ok) throw new Error('credits save: ' + creditsResp.status);
+
+    const compositeJson = await compositeResp.json();
+    const creditsJson = await creditsResp.json();
+    const compositePath = compositeJson.path.replace(/.*\/images\//, 'images/');
+    const creditsPath = (creditsJson.path || '').replace(/.*\/images\//, 'images/');
+    status.textContent = 'Saved: ' + compositePath + ' + ' + (creditsPath || 'credits.md');
+  } catch (err) {
+    status.textContent = 'Save failed: ' + err.message;
+    console.error('saveToEpisodeFolder failed:', err);
+  }
+}
+
+// On load, ask the server whether an episode is configured. If so, reveal the
+// "Save to episode folder" button. Falls back silently to download-only mode.
+async function detectEpisodeSaveCapability() {
+  try {
+    const r = await fetch('/config', { cache: 'no-store' });
+    if (!r.ok) return;
+    const cfg = await r.json();
+    if (cfg.available) {
+      const btn = document.getElementById('saveToEpisodeBtn');
+      if (btn) {
+        btn.style.display = '';
+        btn.title = 'Saves directly to the ' + (cfg.episode || 'episode') + ' folder';
+      }
+    }
+  } catch (e) {
+    // /config not reachable (probably running plain http.server) — leave hidden.
+  }
+}
+
+function updateCreditsPreview() {
+  const wrap = document.getElementById('creditsMdWrap');
+  const pre = document.getElementById('creditsMdPre');
+  const md = generateCreditsMarkdown();
+  if (md) {
+    pre.textContent = md;
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function copyCredits() {
+  const pre = document.getElementById('creditsMdPre');
+  const btn = document.getElementById('copyBtn');
+  navigator.clipboard.writeText(pre.textContent).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ══════════════════════════════════════════════════
+// SAVED COMBOS
+// ══════════════════════════════════════════════════
+function saveCombo() {
+  const combo = {};
+  ['tl','bl','right'].forEach(k => {
+    const s = slotData[k];
+    const poolEntry = sourcePool.find(p => p.id === s.sourceId);
+    combo[k] = {
+      thumbUrl: poolEntry ? poolEntry.thumbUrl : null,
+      sourceId: s.sourceId,
+      code: s.code, credit: s.credit, url: s.url,
+      panX: s.panX, panY: s.panY, zoom: s.zoom
+    };
+  });
+  combo.label = slotData.tl.code + ' + ' + slotData.bl.code + ' + ' + slotData.right.code;
+  savedCombos.push(combo);
+  renderSaved();
+}
+
+function renderSaved() {
+  const row = document.getElementById('savedRow');
+  row.innerHTML = '';
+  savedCombos.forEach((combo, i) => {
+    const div = document.createElement('div');
+    div.className = 'saved-mini';
+    div.onclick = () => loadCombo(i);
+    const grid = document.createElement('div');
+    grid.className = 'mini-grid';
+    [['tl','tl'],['right','rt'],['bl','bl']].forEach(([key, cls]) => {
+      const img = document.createElement('img');
+      img.src = combo[key].thumbUrl || '';
+      img.className = cls;
+      grid.appendChild(img);
+    });
+    div.appendChild(grid);
+    const lbl = document.createElement('div');
+    lbl.className = 'mini-label';
+    lbl.textContent = combo.label;
+    div.appendChild(lbl);
+    const x = document.createElement('button');
+    x.className = 'mini-x';
+    x.textContent = '\u00d7';
+    x.onclick = e => { e.stopPropagation(); savedCombos.splice(i,1); renderSaved(); };
+    div.appendChild(x);
+    row.appendChild(div);
+  });
+}
+
+function loadCombo(i) {
+  const combo = savedCombos[i];
+  ['tl','bl','right'].forEach(k => {
+    const entry = sourcePool.find(p => p.id === combo[k].sourceId);
+    if (!entry || !entry.img) return;
+    const sd = slotData[k];
+    sd.img = entry.img;
+    sd.code = combo[k].code;
+    sd.credit = combo[k].credit;
+    sd.url = combo[k].url;
+    sd.sourceId = combo[k].sourceId;
+    sd.panX = combo[k].panX;
+    sd.panY = combo[k].panY;
+    sd.zoom = combo[k].zoom;
+    renderSlot(k);
+  });
+  updateCredits();
+  updateButtons();
+}
+
+// ══════════════════════════════════════════════════
+// LIGHTBOX
+// ══════════════════════════════════════════════════
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+// ══════════════════════════════════════════════════
+// RESIZE HANDLER
+// ══════════════════════════════════════════════════
+window.addEventListener('resize', () => {
+  ['tl','bl','right'].forEach(k => { if (slotData[k].img) renderSlot(k); });
+});
+
+// ══════════════════════════════════════════════════
+// EPISODE PRELOAD (-customize flow)
+// ══════════════════════════════════════════════════
+// When the page is opened with ?episode=<slug>, fetch episode-preload/manifest.json
+// and feed the listed files through the same handleFiles() pipeline that drag-and-drop
+// uses. This means Unsplash files auto-populate the pool with credits, and non-Unsplash
+// files (guest portraits) trigger the standard credit form so the user can attribute them.
+//
+// We switch to the Upload tab first so the credit forms are visible.
+async function preloadEpisodeFiles() {
+  const params = new URLSearchParams(location.search);
+  if (!params.has('episode')) return;
+
+  // Pre-populate the export filename with the episode slug so saves match the
+  // canonical naming convention (e.g., WC_S01_13_Sharon_Blackie.jpg). The user
+  // can append _optionA / _rev2 / etc. before saving.
+  const slug = params.get('episode');
+  if (slug) {
+    const exportInput = document.getElementById('exportName');
+    if (exportInput && exportInput.value === 'episode-art.jpg') {
+      exportInput.value = slug + '.jpg';
+    }
+  }
+
+  try {
+    const manifestResp = await fetch('episode-preload/manifest.json', { cache: 'no-store' });
+    if (!manifestResp.ok) {
+      console.warn('Episode preload: no manifest at episode-preload/manifest.json');
+      return;
+    }
+    const manifest = await manifestResp.json();
+    const filenames = manifest.files || [];
+    if (!filenames.length) return;
+
+    const files = await Promise.all(filenames.map(async (filename) => {
+      const r = await fetch('episode-preload/images/' + encodeURIComponent(filename));
+      const blob = await r.blob();
+      const type = blob.type || (filename.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg');
+      return new File([blob], filename, { type });
+    }));
+
+    handleFiles(files);
+  } catch (err) {
+    console.warn('Episode preload failed:', err);
+  }
+}
+
+// ══════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  setActiveSlot('tl');
+  detectEpisodeSaveCapability();
+  preloadEpisodeFiles();
+});
+</script>
+
+</body>
+</html>

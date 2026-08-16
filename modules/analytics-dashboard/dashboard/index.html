@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Wonder Cabinet — Show Reference</title>
+  <link rel="icon" href="data:,">
+  <!-- Self-hosted fonts: removes the Google Fonts CDN hop and ~1s of
+       render-blocking time. Preload the two fonts the LCP element uses
+       (Jost 700 for the wordmark/headlines, EB Garamond 400 for body). -->
+  <link rel="preload" href="assets/fonts/jost-v20-latin-700.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/eb-garamond-v32-latin-regular.woff2" as="font" type="font/woff2" crossorigin>
+  <style>
+    @font-face {
+      font-family: 'Jost'; font-style: normal; font-weight: 400; font-display: swap;
+      src: url('assets/fonts/jost-v20-latin-regular.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Jost'; font-style: normal; font-weight: 500; font-display: swap;
+      src: url('assets/fonts/jost-v20-latin-500.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'Jost'; font-style: normal; font-weight: 700; font-display: swap;
+      src: url('assets/fonts/jost-v20-latin-700.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'EB Garamond'; font-style: normal; font-weight: 400; font-display: swap;
+      src: url('assets/fonts/eb-garamond-v32-latin-regular.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'EB Garamond'; font-style: italic; font-weight: 400; font-display: swap;
+      src: url('assets/fonts/eb-garamond-v32-latin-italic.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'EB Garamond'; font-style: normal; font-weight: 500; font-display: swap;
+      src: url('assets/fonts/eb-garamond-v32-latin-500.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'EB Garamond'; font-style: italic; font-weight: 500; font-display: swap;
+      src: url('assets/fonts/eb-garamond-v32-latin-500italic.woff2') format('woff2');
+    }
+    @font-face {
+      font-family: 'EB Garamond'; font-style: normal; font-weight: 600; font-display: swap;
+      src: url('assets/fonts/eb-garamond-v32-latin-600.woff2') format('woff2');
+    }
+    /* ──────────────────────────────────────────────────────────────
+       Wonder Cabinet — design system v1.0
+       Curator's notebook aesthetic: dark ground, editorial
+       typography, WC green as a rare accent.
+       Built to match modules/episode-art-builder family.
+       ────────────────────────────────────────────────────────────── */
+
+    :root {
+      /* Palette — per ghost-dev/design/DESIGN_SYSTEM.md and
+         .impeccable.md (no pure black, #1a1a1a→#101010 range). */
+      --wc-bg:           #1a1a1a;
+      --wc-bg-deeper:    #131313;
+      --wc-green:        #10a544;
+      --wc-green-bright: #14c952;
+      --wc-green-dim:    rgba(16, 165, 68, 0.35);
+      --wc-green-glow:   rgba(16, 165, 68, 0.08);
+      --wc-cream:        #fffaeb;
+      --wc-text:         #f0e8d0;  /* warm cream-tinted, was #e8e8e8 */
+      --wc-text-soft:    #c8c0a3;  /* warm secondary, was #b8b8b8 */
+      --wc-text-faint:   #968d75;  /* warm dim, was #8a8a85 */
+      --wc-rule:         rgba(255, 250, 235, 0.12);
+      --wc-rule-strong:  rgba(255, 250, 235, 0.26);
+      --wc-warning:      #d6a14e;
+
+      /* Typography — Futura PT/Jost for headlines & metadata,
+         Adobe Garamond Pro/EB Garamond for body & editorial quotes. */
+      --font-display: 'Jost', 'Futura PT', 'Nunito Sans', sans-serif;
+      --font-body:    'EB Garamond', 'Adobe Garamond Pro', 'Garamond', Georgia, serif;
+      --font-mono:    ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+      /* Type scale — bolder presence pass.
+         Modular-ish with at least 1.25 ratio between adjacent steps.
+         Tiny/small bumped because metadata was getting buried. */
+      --text-display: clamp(5rem, 12vw, 8rem);       /* hero (unused now but kept for future) */
+      --text-h1:      clamp(2.5rem, 5.5vw, 3.5rem); /* wordmark — bigger */
+      --text-h2:      clamp(1.125rem, 2.2vw, 1.4rem);
+      --text-h3:      0.85rem;                       /* eyebrow labels — was 0.7, painful */
+      --text-body:    1.125rem;                      /* 18px, was 17px */
+      --text-small:   0.95rem;                       /* was 0.875 */
+      --text-tiny:    0.8rem;                        /* was 0.7 */
+
+      /* Letter spacing — wide tracking for uppercase, per design system */
+      --tracking-wide:  0.22em;
+      --tracking-mid:   0.08em;
+      --tracking-tight: -0.02em;
+
+      /* Spacing — 4pt scale */
+      --space-1:  0.25rem;
+      --space-2:  0.5rem;
+      --space-3:  0.75rem;
+      --space-4:  1rem;
+      --space-5:  1.5rem;
+      --space-6:  2rem;
+      --space-7:  3rem;
+      --space-8:  4rem;
+      --space-9:  6rem;
+      --space-10: 8rem;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--wc-bg);
+      color: var(--wc-text);
+      font-family: var(--font-body);
+      font-size: var(--text-body);
+      line-height: 1.6;
+      font-feature-settings: "kern", "liga";
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: var(--space-8) var(--space-5) var(--space-10);
+    }
+
+    /* ── Masthead ──────────────────────────────────────────────── */
+    header.masthead {
+      margin-bottom: var(--space-9);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: var(--space-5);
+      align-items: start;
+    }
+    .masthead-mark {
+      width: 112px;
+      height: auto;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    .masthead-text {
+      min-width: 0;
+    }
+    @media (max-width: 540px) {
+      header.masthead {
+        grid-template-columns: 1fr;
+        gap: var(--space-4);
+      }
+      .masthead-mark {
+        width: 80px;
+      }
+    }
+    .wordmark {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: var(--text-h1);
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--wc-cream);
+      margin: 0 0 var(--space-4);
+      line-height: 1;
+    }
+    .freshness {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      font-weight: 500;
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--wc-text-faint);
+    }
+    .freshness .dot {
+      width: 7px;
+      height: 7px;
+      background: var(--wc-green);
+      box-shadow: 0 0 6px var(--wc-green-dim);
+      flex-shrink: 0;
+    }
+    .freshness.stale .dot {
+      background: var(--wc-warning);
+      box-shadow: none;
+    }
+
+    /* ── Section structure ─────────────────────────────────────── */
+    section {
+      margin-bottom: var(--space-9);
+    }
+    section .eyebrow {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.9rem;            /* was 0.7 / --text-h3 — much more legible */
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--wc-green);
+      margin: 0 0 var(--space-5);
+    }
+    section .section-title {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: var(--text-h2);
+      letter-spacing: var(--tracking-mid);
+      text-transform: uppercase;
+      color: var(--wc-cream);
+      margin: 0 0 var(--space-6);
+    }
+
+    /* ── Hero numbers — three tight metric cards ───────────────── */
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-3);
+    }
+    .metric-card {
+      border-top: 2px solid var(--wc-green);
+      padding: var(--space-4) var(--space-4) var(--space-4) 0;
+      min-width: 0;
+    }
+    .metric-card .big-k {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(3.25rem, 8.5vw, 4.75rem);
+      letter-spacing: var(--tracking-tight);
+      line-height: 1;
+      color: var(--wc-cream);
+      margin: 0 0 var(--space-3);
+      font-variant-numeric: tabular-nums;
+    }
+    .metric-card .big-k .unit {
+      color: var(--wc-green);
+      margin-left: 0.04em;
+      font-weight: 500;
+    }
+    .metric-card .label {
+      font-family: var(--font-body);
+      font-style: italic;
+      font-size: 1.3rem;            /* was 1.05 */
+      line-height: 1.25;
+      color: var(--wc-text);
+      margin: 0 0 var(--space-2);
+    }
+    .metric-card .sublabel {
+      font-family: var(--font-display);
+      font-size: 0.85rem;           /* was --text-tiny / 0.7 */
+      font-weight: 500;
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--wc-text-faint);
+      margin: 0;
+    }
+    .metric-card .precise {
+      font-family: var(--font-display);
+      font-size: 0.875rem;          /* was --text-tiny / 0.7 — way too small */
+      color: var(--wc-text-soft);
+      letter-spacing: var(--tracking-mid);
+      font-variant-numeric: tabular-nums;
+      margin: var(--space-4) 0 0;
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--wc-rule);
+    }
+    .metric-card .precise strong {
+      color: var(--wc-cream);
+      font-weight: 500;
+    }
+    .metric-card .precise .range {
+      display: block;
+      margin-top: var(--space-1);
+      color: var(--wc-text-faint);
+    }
+    @media (max-width: 640px) {
+      .metric-row { grid-template-columns: 1fr; }
+    }
+
+    /* ── Editorial pull quote (replaces border-left blockquote) ── */
+    .pullquote {
+      position: relative;
+      font-family: var(--font-body);
+      font-style: italic;
+      font-size: 1.4rem;          /* was 1.2 */
+      line-height: 1.5;
+      color: var(--wc-cream);
+      margin: 0 0 var(--space-5);
+      padding-left: var(--space-7);
+      max-width: 62ch;
+    }
+    .pullquote .quote-mark {
+      position: absolute;
+      left: 0;
+      top: -0.35em;
+      font-family: var(--font-body);
+      font-style: normal;
+      font-weight: 500;
+      font-size: 4.5rem;          /* was 4 */
+      line-height: 1;
+      color: var(--wc-green);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .phrasing-context {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 0.85rem;           /* was --text-tiny / 0.7 */
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--wc-text-faint);
+      margin: var(--space-6) 0 var(--space-3);
+    }
+
+    /* ── Audience depth — distinct treatment, no side stripes ── */
+    .audience-depth {
+      position: relative;
+      padding-top: var(--space-6);
+      padding-bottom: var(--space-6);
+      border-top: 1px solid var(--wc-green-dim);
+      border-bottom: 1px solid var(--wc-green-dim);
+    }
+    .audience-depth p { margin: 0 0 var(--space-4); }
+    .audience-depth p:last-child { margin-bottom: 0; }
+    .audience-depth .disclosure {
+      font-size: 0.95rem;
+      font-style: italic;
+      color: var(--wc-text-faint);
+      margin-top: var(--space-5);
+      max-width: 65ch;
+      line-height: 1.55;
+    }
+
+    .sparkline-frame {
+      margin: var(--space-5) 0;
+      padding: var(--space-4) 0;
+      background: var(--wc-green-glow);
+    }
+    .sparkline-frame svg { display: block; width: 100%; height: 110px; }
+    .sparkline-axis {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      letter-spacing: var(--tracking-mid);
+      color: var(--wc-text-faint);
+      padding: 0 var(--space-2);
+      margin-top: var(--space-2);
+      font-variant-numeric: tabular-nums;
+    }
+    .sparkline-endpoint-label {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: var(--tracking-mid);
+      fill: var(--wc-cream);
+    }
+
+    .growth-narrative {
+      font-family: var(--font-body);
+      font-size: var(--text-body);
+      color: var(--wc-text);
+      max-width: 65ch;
+      margin: 0;
+    }
+    .growth-narrative strong { color: var(--wc-cream); font-weight: 500; }
+
+    /* ── Top episodes — magazine "best of" cards ─────────────────
+       Three cover-art-led cards in a grid. Each card is a clickable
+       link with the cover image as the visual anchor, italic Garamond
+       title, and drop+30 as the data callout below a hairline divider.
+       ─────────────────────────────────────────────────────────────── */
+
+    .top-episodes {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-5);
+    }
+    @media (max-width: 640px) {
+      .top-episodes {
+        grid-template-columns: 1fr;
+        gap: var(--space-8);
+      }
+    }
+
+    .episode-card {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+      text-decoration: none;
+      color: inherit;
+      min-width: 0;
+    }
+
+    .episode-card-cover-wrap {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      background: var(--wc-bg-deeper);
+      overflow: hidden;
+      transition: outline-offset 0.2s ease-out;
+    }
+    .episode-card-cover {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+    .episode-card:hover .episode-card-cover-wrap,
+    .episode-card:focus-visible .episode-card-cover-wrap {
+      outline: 2px solid var(--wc-green);
+      outline-offset: 6px;
+    }
+    .episode-card:focus-visible { outline: none; }
+
+    .episode-card-title {
+      font-family: var(--font-body);
+      font-style: italic;
+      font-weight: 500;
+      font-size: 1.25rem;
+      line-height: 1.25;
+      margin: var(--space-2) 0 0;
+      color: var(--wc-text);
+      transition: color 0.15s ease;
+    }
+    .episode-card:hover .episode-card-title,
+    .episode-card:focus-visible .episode-card-title {
+      color: var(--wc-green);
+    }
+
+    .episode-card-released {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 0.78rem;
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--wc-text-faint);
+    }
+
+    .episode-card-stat {
+      margin-top: var(--space-3);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--wc-rule);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+    }
+    .episode-card-num {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(2rem, 5vw, 2.5rem);
+      line-height: 1;
+      color: var(--wc-cream);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: var(--tracking-tight);
+    }
+    .episode-card-num-suffix {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 0.75rem;
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--wc-text-faint);
+      margin-top: var(--space-1);
+    }
+
+    /* ── Methodology — editorial body, dimmed caveats ──────────── */
+    .methodology p {
+      font-family: var(--font-body);
+      font-size: var(--text-body);        /* now 1.125rem / 18px */
+      line-height: 1.55;
+      color: var(--wc-text);
+      max-width: 65ch;
+      margin: 0 0 var(--space-4);
+    }
+    .methodology p strong {
+      color: var(--wc-cream);
+      font-weight: 600;
+    }
+    .methodology .caveat {
+      color: var(--wc-text-soft);
+      font-size: 1.0625rem;
+      padding-top: var(--space-3);
+      border-top: 1px solid var(--wc-rule);
+      margin-top: var(--space-5);
+    }
+    .methodology .caveat strong { color: var(--wc-text); }
+
+    /* ── States ──────────────────────────────────────────────── */
+    .placeholder {
+      font-family: var(--font-body);
+      font-style: italic;
+      color: var(--wc-text-faint);
+    }
+    .error-banner {
+      font-family: var(--font-body);
+      font-size: var(--text-body);
+      color: var(--wc-warning);
+      padding: var(--space-4) var(--space-5);
+      border-top: 1px solid var(--wc-warning);
+      border-bottom: 1px solid var(--wc-warning);
+      margin: var(--space-6) 0;
+    }
+
+    footer {
+      margin-top: var(--space-10);
+      padding-top: var(--space-5);
+      border-top: 1px solid var(--wc-rule);
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      letter-spacing: var(--tracking-wide);
+      text-transform: uppercase;
+      color: var(--wc-text-faint);
+    }
+    footer .colophon {
+      max-width: 50ch;
+    }
+
+    /* ── Selection ────────────────────────────────────────────── */
+    ::selection {
+      background: var(--wc-green);
+      color: var(--wc-bg);
+    }
+
+    /* ── Reduced motion (no animations to disable, but be ready) */
+    @media (prefers-reduced-motion: reduce) {
+      * { animation: none !important; transition: none !important; }
+    }
+
+    /* ── Mobile ──────────────────────────────────────────────── */
+    @media (max-width: 540px) {
+      .container { padding: var(--space-6) var(--space-4) var(--space-8); }
+      .exhibit .label { font-size: 1.05rem; }
+      .pullquote { padding-left: var(--space-6); }
+      .pullquote::before { font-size: 3rem; }
+      table.episodes td.num { font-size: 0.95rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+
+    <header class="masthead">
+      <img class="masthead-mark"
+           src="assets/cabinet-logo.png"
+           srcset="assets/cabinet-logo.png 1x, assets/cabinet-logo@2x.png 2x"
+           width="88" height="88"
+           alt="" aria-hidden="true"
+           decoding="async">
+      <div class="masthead-text">
+        <h1 class="wordmark">Wonder Cabinet</h1>
+        <p class="freshness" id="freshness">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="freshness-text">Snapshot taken <time id="snapshot-date">…</time></span>
+        </p>
+      </div>
+    </header>
+
+    <div id="error-container"></div>
+
+    <section aria-label="Headline numbers">
+      <p class="eyebrow">The Numbers</p>
+      <div class="metric-row" id="metric-row"></div>
+    </section>
+
+    <section class="phrasing">
+      <p class="eyebrow">How to say it</p>
+
+      <p class="phrasing-context">For peer-outlet conversations</p>
+      <p class="pullquote" id="phrasing-peer"></p>
+
+      <p class="phrasing-context">If they want a monthly framing</p>
+      <p class="pullquote" id="phrasing-monthly"></p>
+    </section>
+
+    <section class="audience-depth" aria-label="Audience depth">
+      <p class="eyebrow">Audience Depth</p>
+      <div class="sparkline-frame">
+        <svg id="growth-sparkline" viewBox="0 0 600 110" preserveAspectRatio="none" aria-label="Cumulative newsletter subscriber growth over time"></svg>
+        <div class="sparkline-axis">
+          <span id="sparkline-start"></span>
+          <span id="sparkline-end"></span>
+        </div>
+      </div>
+      <p class="growth-narrative" id="growth-narrative"></p>
+      <p class="phrasing-context">For funder conversations</p>
+      <p class="pullquote" id="phrasing-funder"></p>
+      <p class="disclosure">Newsletter subscribers are people who opted in on wondercabinetproductions.com. Distinct from podcast listeners (with overlap), not additive.</p>
+    </section>
+
+    <section>
+      <p class="eyebrow">Top Episodes</p>
+      <div class="top-episodes" id="top-episodes" aria-label="Top episodes by 30-day downloads"></div>
+    </section>
+
+    <section class="methodology">
+      <p class="eyebrow">Methodology</p>
+      <p>
+        <strong>Downloads</strong> are measured via PRX Dovetail, IAB v2.2 compliant
+        (&ge;60 seconds of media file requested, deduplicated by IP + User Agent within
+        24 hours).
+      </p>
+      <p>
+        The <strong>30-day window</strong> is the industry-standard episode comparison
+        window per Buzzsprout, Libsyn, and Castos. PRX's native export uses 28 days; we
+        derive the full 30 from per-day data for fairer benchmarking.
+      </p>
+      <p class="caveat">
+        Figures do <strong>not</strong> include Spotify listens. Spotify caches audio on
+        their own infrastructure, so those plays are measured separately on Spotify's side
+        and add to the totals shown here.
+      </p>
+      <p class="caveat">
+        iOS 17 (October 2023) paused auto-downloads for inactive followers, causing a
+        15–25% step-down in measured downloads industry-wide. Cross-era comparisons
+        require this context.
+      </p>
+    </section>
+
+    <footer>
+      <p class="colophon">
+        Snapshot regenerated by the wc-analytics pipeline · Wonder Cabinet Productions
+      </p>
+    </footer>
+  </main>
+
+  <script>
+    'use strict';
+
+    // ──────────────────────────────────────────────────────────────
+    // Safety model: data renders via createElement + textContent.
+    // No innerHTML with interpolated data — XSS is structurally impossible
+    // for episode titles or any other string from the snapshot.
+    // ──────────────────────────────────────────────────────────────
+
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const fmt = new Intl.NumberFormat('en-US');
+
+    function el(tag, props, ...children) {
+      const e = document.createElement(tag);
+      if (props) {
+        for (const [k, v] of Object.entries(props)) {
+          if (v == null) continue;
+          if (k === 'class') e.className = v;
+          else if (k === 'text') e.textContent = v;
+          else e.setAttribute(k, v);
+        }
+      }
+      for (const c of children) {
+        if (c == null) continue;
+        e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+      }
+      return e;
+    }
+
+    function svg(tag, props) {
+      const e = document.createElementNS(SVG_NS, tag);
+      if (props) {
+        for (const [k, v] of Object.entries(props)) {
+          if (v == null) continue;
+          e.setAttribute(k, v);
+        }
+      }
+      return e;
+    }
+
+    function roundDown(n) {
+      if (n >= 100000) return Math.floor(n / 10000) * 10000;
+      if (n >= 10000)  return Math.floor(n / 1000) * 1000;
+      if (n >= 1000)   return Math.floor(n / 100) * 100;
+      if (n >= 100)    return Math.floor(n / 10) * 10;
+      return n;
+    }
+
+    /** Compact K-suffix formatter: 10,351 → "10K", 1,007 → "1K", 540 → "540". */
+    function compactK(n) {
+      if (n == null) return null;
+      if (n >= 1000) return Math.floor(n / 1000) + 'K';
+      return String(n);
+    }
+
+    /** Compact range like "8.9K–12.7K" for the precise-supporting line. */
+    function compactRange(min, max) {
+      const one = (n) => {
+        if (n >= 10000) return Math.round(n / 1000) + 'K';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+        return String(n);
+      };
+      return `${one(min)}–${one(max)}`;
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso.length > 10 ? iso : iso + 'T00:00:00Z');
+      return d.toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC'
+      });
+    }
+
+    function fmtMonth(yyyymm) {
+      if (!yyyymm) return '—';
+      const [y, m] = yyyymm.split('-').map(Number);
+      const d = new Date(Date.UTC(y, m - 1, 1));
+      return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', timeZone: 'UTC' });
+    }
+
+    function median(values) {
+      if (values.length === 0) return null;
+      const sorted = values.slice().sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+    }
+
+    function daysBetween(a, b) {
+      return Math.round((Date.parse(b) - Date.parse(a)) / 86400000);
+    }
+
+    function showError(msg) {
+      const container = document.getElementById('error-container');
+      container.replaceChildren(el('div', { class: 'error-banner', text: msg }));
+    }
+
+    /** Render a pull-quote with a leading green curly-quote glyph that's
+     *  hidden from assistive tech. Replaces a ::before pseudo-element. */
+    function renderPullquote(elementId, text) {
+      const target = document.getElementById(elementId);
+      if (!target) return;
+      target.replaceChildren(
+        el('span', { class: 'quote-mark', 'aria-hidden': 'true', text: '“' }),
+        document.createTextNode(text),
+      );
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // Metric computation
+    // ──────────────────────────────────────────────────────────────
+
+    function completedEpisodes(downloads) {
+      return (downloads.episodes || []).filter(ep =>
+        ep.days_since_release >= 30 &&
+        !(ep.incomplete_windows || []).includes('drop_plus_30')
+      );
+    }
+
+    function computeHero(ghost, downloads) {
+      const completed = completedEpisodes(downloads);
+      const dropValues = completed.map(ep => ep.drop_plus_30).filter(v => v != null);
+      const avgDrop30 = dropValues.length
+        ? Math.round(dropValues.reduce((a, b) => a + b, 0) / dropValues.length)
+        : null;
+      const minDrop30 = dropValues.length ? Math.min(...dropValues) : null;
+      const maxDrop30 = dropValues.length ? Math.max(...dropValues) : null;
+
+      return {
+        avgDrop30, minDrop30, maxDrop30,
+        rolling30: (downloads.show_totals || {}).rolling_30d || null,
+        rolling90: (downloads.show_totals || {}).rolling_90d || null,
+        newsletterTotal: ((ghost.members || {}).total) || null,
+      };
+    }
+
+    function computeGrowth(ghost) {
+      const history = ghost.member_growth_history || [];
+      if (history.length === 0) return null;
+      const complete = history.slice(0, -1);
+      const recent = complete.slice(-6);
+      const medianPerMonth = median(recent.map(m => m.added));
+      return {
+        history,
+        firstMonth: history[0].month,
+        firstCumulative: history[0].cumulative,
+        latestCumulative: history[history.length - 1].cumulative,
+        medianPerMonth,
+      };
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // Renderers
+    // ──────────────────────────────────────────────────────────────
+
+    function renderFreshness(ghost, downloads) {
+      const dlDate = downloads.snapshot_date || (downloads.collected_at || '').slice(0, 10);
+      const ghDate = (ghost.collected_at || '').slice(0, 10) || ghost.snapshot_date;
+      const useDate = dlDate || ghDate;
+      const dateEl = document.getElementById('snapshot-date');
+      dateEl.textContent = fmtDate(useDate);
+      if (useDate) dateEl.setAttribute('datetime', useDate);
+
+      if (useDate) {
+        const ageDays = daysBetween(useDate, new Date().toISOString().slice(0, 10));
+        if (ageDays > 21) {
+          document.getElementById('freshness').classList.add('stale');
+          document.getElementById('freshness-text').textContent =
+            `Snapshot taken ${fmtDate(useDate)} · ${ageDays} days ago — may be stale`;
+        }
+      }
+    }
+
+    function renderMetricCard({ value, label, sublabel, precise, range }) {
+      const card = el('div', { class: 'metric-card' });
+
+      const bigK = el('div', { class: 'big-k' });
+      if (value != null) {
+        const k = compactK(value);
+        if (k && k.endsWith('K')) {
+          bigK.appendChild(document.createTextNode(k.slice(0, -1)));
+          bigK.appendChild(el('span', { class: 'unit', text: 'K' }));
+        } else {
+          bigK.textContent = k;
+        }
+      } else {
+        bigK.textContent = '—';
+      }
+      card.appendChild(bigK);
+
+      card.appendChild(el('div', { class: 'label', text: label }));
+      card.appendChild(el('div', { class: 'sublabel', text: sublabel }));
+
+      if (precise != null) {
+        const preciseEl = el('div', { class: 'precise' },
+          el('strong', { text: fmt.format(precise) }),
+        );
+        if (range) {
+          preciseEl.appendChild(el('span', {
+            class: 'range',
+            text: `range ${compactRange(range[0], range[1])}`,
+          }));
+        }
+        card.appendChild(preciseEl);
+      }
+
+      return card;
+    }
+
+    function renderHero(metrics) {
+      const container = document.getElementById('metric-row');
+      container.replaceChildren(
+        renderMetricCard({
+          value: metrics.avgDrop30,
+          label: 'per episode',
+          sublabel: '30-day average',
+          precise: metrics.avgDrop30,
+          range: (metrics.minDrop30 && metrics.maxDrop30) ? [metrics.minDrop30, metrics.maxDrop30] : null,
+        }),
+        renderMetricCard({
+          value: metrics.rolling30,
+          label: 'per month',
+          sublabel: 'rolling 30-day',
+          precise: metrics.rolling30,
+        }),
+        renderMetricCard({
+          value: metrics.newsletterTotal,
+          label: 'newsletter subscribers',
+          sublabel: 'and growing',
+          precise: metrics.newsletterTotal,
+        }),
+      );
+    }
+
+    function renderPhrasing(metrics) {
+      // Suggested phrasing uses ROUNDED figures — these are lines the
+      // producer says out loud; round numbers cache better in working memory.
+      const avgRounded = metrics.avgDrop30 != null ? fmt.format(roundDown(metrics.avgDrop30)) : '—';
+      const maxRounded = metrics.maxDrop30 != null
+        ? fmt.format(Math.floor(metrics.maxDrop30 / 1000) * 1000)
+        : '—';
+      const monthlyRounded = metrics.rolling30 != null ? fmt.format(roundDown(metrics.rolling30)) : '—';
+
+      renderPullquote(
+        'phrasing-peer',
+        `Wonder Cabinet averages around ${avgRounded} downloads per episode in the first 30 days. ` +
+        `Our strongest recent episodes have crossed ${maxRounded}.`,
+      );
+      renderPullquote(
+        'phrasing-monthly',
+        `We're at about ${monthlyRounded} downloads per month across the show.`,
+      );
+    }
+
+    function renderSparkline(growth) {
+      const svgEl = document.getElementById('growth-sparkline');
+      svgEl.replaceChildren();
+
+      if (!growth || growth.history.length < 2) {
+        const t = svg('text', {
+          x: '300', y: '55', 'text-anchor': 'middle',
+          fill: '#8a8a85', 'font-size': '12',
+          'font-family': "'Jost', sans-serif",
+          'letter-spacing': '0.05em',
+        });
+        t.textContent = 'Not enough history yet.';
+        svgEl.appendChild(t);
+        return;
+      }
+
+      const W = 600, H = 110, PAD_X = 6, PAD_TOP = 14, PAD_BOTTOM = 6;
+      const xs = growth.history.map(p => p.cumulative);
+      const max = Math.max(...xs);
+      const min = Math.min(...xs);
+      const range = Math.max(max - min, 1);
+
+      const coords = growth.history.map((p, i) => {
+        const x = PAD_X + (i / (growth.history.length - 1)) * (W - 2 * PAD_X);
+        const y = PAD_TOP + (1 - (p.cumulative - min) / range) * (H - PAD_TOP - PAD_BOTTOM);
+        return [x, y];
+      });
+
+      // Area fill
+      const areaPath = `M ${PAD_X},${H} L ` +
+        coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L ') +
+        ` L ${W - PAD_X},${H} Z`;
+      svgEl.appendChild(svg('path', {
+        d: areaPath, fill: '#10a544', 'fill-opacity': '0.12', stroke: 'none',
+      }));
+
+      // Line
+      svgEl.appendChild(svg('polyline', {
+        points: coords.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' '),
+        fill: 'none', stroke: '#10a544', 'stroke-width': '2',
+        'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+      }));
+
+      // Endpoint dot — green core with subtle outer glow ring
+      const [lastX, lastY] = coords[coords.length - 1];
+      svgEl.appendChild(svg('circle', {
+        cx: lastX.toFixed(1), cy: lastY.toFixed(1), r: '6',
+        fill: 'none', stroke: '#10a544', 'stroke-opacity': '0.25', 'stroke-width': '2',
+      }));
+      svgEl.appendChild(svg('circle', {
+        cx: lastX.toFixed(1), cy: lastY.toFixed(1), r: '3.5', fill: '#10a544',
+      }));
+
+      // Endpoint label
+      const labelTextX = Math.min(W - PAD_X - 8, Math.max(lastX, 60));
+      const labelEl = svg('text', {
+        x: labelTextX.toFixed(1),
+        y: Math.max(PAD_TOP, lastY - 12).toFixed(1),
+        'text-anchor': lastX > W - 80 ? 'end' : 'middle',
+        class: 'sparkline-endpoint-label',
+      });
+      labelEl.textContent = fmt.format(growth.latestCumulative);
+      svgEl.appendChild(labelEl);
+    }
+
+    function renderGrowth(ghost) {
+      const growth = computeGrowth(ghost);
+      renderSparkline(growth);
+
+      const startEl = document.getElementById('sparkline-start');
+      const endEl = document.getElementById('sparkline-end');
+      const narrativeEl = document.getElementById('growth-narrative');
+      const funderEl = document.getElementById('phrasing-funder');
+
+      if (!growth) {
+        startEl.textContent = '';
+        endEl.textContent = '';
+        narrativeEl.textContent = 'Subscriber growth history not available yet.';
+        renderPullquote(
+          'phrasing-funder',
+          `Beyond the podcast itself, we've built a direct relationship with our audience.`,
+        );
+        return;
+      }
+
+      startEl.textContent = `${fmtMonth(growth.firstMonth)} · ${fmt.format(growth.firstCumulative)}`;
+      const latestMonth = growth.history[growth.history.length - 1].month;
+      endEl.textContent = `${fmtMonth(latestMonth)} · ${fmt.format(growth.latestCumulative)}`;
+
+      if (growth.firstMonth && growth.medianPerMonth != null) {
+        narrativeEl.replaceChildren(
+          document.createTextNode('Subscriber base has grown from '),
+          el('strong', { text: fmt.format(growth.firstCumulative) }),
+          document.createTextNode(' in '),
+          el('strong', { text: fmtMonth(growth.firstMonth) }),
+          document.createTextNode(' to '),
+          el('strong', { text: fmt.format(growth.latestCumulative) }),
+          document.createTextNode(` today — a typical month adds about ${growth.medianPerMonth} new subscribers (median over the last 6 months).`),
+        );
+        renderPullquote(
+          'phrasing-funder',
+          `Beyond the podcast itself, we've built a direct relationship with our audience — ` +
+          `over ${fmt.format(roundDown(growth.latestCumulative))} newsletter subscribers, growing from ` +
+          `about ${fmt.format(growth.firstCumulative)} at launch in ${fmtMonth(growth.firstMonth)}. ` +
+          `We're adding roughly ${growth.medianPerMonth} new subscribers per month organically.`,
+        );
+      } else {
+        narrativeEl.textContent = `Subscriber base: ${fmt.format(growth.latestCumulative)}.`;
+        renderPullquote(
+          'phrasing-funder',
+          `Beyond the podcast itself, we've built a direct relationship with our audience — ` +
+          `over ${fmt.format(roundDown(growth.latestCumulative))} newsletter subscribers.`,
+        );
+      }
+    }
+
+    function renderEpisodeCard(ep) {
+      // Cover-art-led card. Cover image marked alt="" (decorative); the
+      // accessible name is provided by the title heading inside the link.
+      const card = ep.episode_url
+        ? el('a', {
+            class: 'episode-card',
+            href: ep.episode_url,
+            target: '_blank',
+            rel: 'noopener noreferrer',
+          })
+        : el('div', { class: 'episode-card' });
+
+      const coverWrap = el('div', { class: 'episode-card-cover-wrap' });
+      if (ep.image_url) {
+        coverWrap.appendChild(el('img', {
+          class: 'episode-card-cover',
+          src: ep.image_url,
+          alt: '',
+          loading: 'lazy',
+          decoding: 'async',
+        }));
+      }
+      card.appendChild(coverWrap);
+
+      card.appendChild(el('div', {
+        class: 'episode-card-released',
+        text: `Released ${fmtDate(ep.released_at)}`,
+      }));
+      card.appendChild(el('h3', { class: 'episode-card-title', text: ep.title || '' }));
+
+      const stat = el('div', { class: 'episode-card-stat' });
+      stat.appendChild(el('div', {
+        class: 'episode-card-num',
+        text: fmt.format(ep.drop_plus_30 || 0),
+      }));
+      stat.appendChild(el('div', {
+        class: 'episode-card-num-suffix',
+        text: 'downloads in 30 days',
+      }));
+      card.appendChild(stat);
+
+      return card;
+    }
+
+    function renderEpisodes(downloads) {
+      // Top 3 by drop+30 from the data period, completed windows only.
+      // We exclude episodes still maturing because comparing partial counts
+      // against full ones would mislead the producer audience.
+      const episodes = (downloads.episodes || [])
+        .filter(ep =>
+          ep.drop_plus_30 != null &&
+          !(ep.incomplete_windows || []).includes('drop_plus_30')
+        )
+        .sort((a, b) => (b.drop_plus_30 || 0) - (a.drop_plus_30 || 0))
+        .slice(0, 3);
+
+      const container = document.getElementById('top-episodes');
+      if (episodes.length === 0) {
+        container.replaceChildren(
+          el('p', { class: 'placeholder',
+            text: 'No completed episodes in the data period yet.' })
+        );
+        return;
+      }
+      container.replaceChildren(...episodes.map(renderEpisodeCard));
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    // Boot
+    // ──────────────────────────────────────────────────────────────
+
+    async function load() {
+      try {
+        const [ghostRes, downloadsRes] = await Promise.all([
+          fetch('data/ghost.json'),
+          fetch('data/downloads.json'),
+        ]);
+
+        if (!ghostRes.ok || !downloadsRes.ok) {
+          throw new Error(`Failed to load snapshots (ghost ${ghostRes.status}, downloads ${downloadsRes.status})`);
+        }
+
+        const ghost = await ghostRes.json();
+        const downloads = await downloadsRes.json();
+
+        const metrics = computeHero(ghost, downloads);
+
+        renderFreshness(ghost, downloads);
+        renderHero(metrics);
+        renderPhrasing(metrics);
+        renderGrowth(ghost);
+        renderEpisodes(downloads);
+      } catch (err) {
+        console.error(err);
+        showError('Could not load show data: ' + err.message +
+                  '. Run `python -m src.cli build-dashboard` first.');
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

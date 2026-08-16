@@ -1,0 +1,13 @@
+{
+  "feed_url": "https://feeds.ttbook.org/ttbook",
+  "ghost": {
+    "url": "http://192.168.5.156:2368",
+    "api_version": "v5.0"
+  },
+  "defaults": {
+    "status": "draft",
+    "author": "Wisconsin Public Radio",
+    "primary_tag": "Wonder Cabinet"
+  },
+  "state_file": "data/published_episodes.json"
+}

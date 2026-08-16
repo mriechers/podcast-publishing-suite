@@ -1,0 +1,1292 @@
+1
+00:00:00,000 --> 00:00:09,320
+I'm Steve Paulson, and we are back with theoretical physicist Carlo Rivelli, who has been thinking
+
+2
+00:00:09,320 --> 00:00:13,620
+about why he was consumed by questions about ultimate reality when he was young.
+
+3
+00:00:15,760 --> 00:00:19,760
+Yes, I had a difficult adolescence.
+
+4
+00:00:20,400 --> 00:00:22,880
+I disliked the adults around me.
+
+5
+00:00:23,340 --> 00:00:25,740
+I couldn't understand why they were doing what they were doing.
+
+6
+00:00:25,740 --> 00:00:33,020
+Everybody had great, beautiful ideals to talk about, and they seemed to me all to be fake
+
+7
+00:00:33,020 --> 00:00:34,860
+and incredibly hypocritical.
+
+8
+00:00:35,420 --> 00:00:38,840
+So I was very confused about the world, about everything.
+
+9
+00:00:38,960 --> 00:00:40,760
+And this confusion grew, in a sense.
+
+10
+00:00:41,060 --> 00:00:46,800
+And the desire of putting order and understanding was very strong.
+
+11
+00:00:47,100 --> 00:00:53,120
+And I remember that I had this strong sense, there should be a truth somewhere.
+
+12
+00:00:53,280 --> 00:00:54,440
+I want to go for the truth.
+
+13
+00:00:54,440 --> 00:00:56,140
+This has been a...
+
+14
+00:00:56,140 --> 00:01:01,860
+If I read back, I have been writing all my life a lot, just for myself, notebook and notebook.
+
+15
+00:01:02,520 --> 00:01:08,880
+And this idea, I want to try to go for the truth, it's all over my writing.
+
+16
+00:01:10,320 --> 00:01:12,040
+I don't want to fake it.
+
+17
+00:01:12,360 --> 00:01:13,780
+I don't want to become hypocritical.
+
+18
+00:01:13,920 --> 00:01:14,880
+And I want to search.
+
+19
+00:01:15,500 --> 00:01:17,120
+That was also the spirit of the time.
+
+20
+00:01:17,180 --> 00:01:17,960
+We were all searching.
+
+21
+00:01:18,660 --> 00:01:19,400
+This is all in search.
+
+22
+00:01:19,400 --> 00:01:23,460
+But I'm sure you're searching now, but it sounds like it's a very different way now.
+
+23
+00:01:23,460 --> 00:01:24,660
+So I'm trying to figure out...
+
+24
+00:01:24,660 --> 00:01:25,160
+It is a big...
+
+25
+00:01:25,160 --> 00:01:26,520
+What was the nature of that search?
+
+26
+00:01:26,520 --> 00:01:27,140
+I'm getting there.
+
+27
+00:01:27,200 --> 00:01:27,940
+I'm getting there.
+
+28
+00:01:28,440 --> 00:01:29,340
+I'm still searching, right?
+
+29
+00:01:29,440 --> 00:01:30,440
+I'm paid for search.
+
+30
+00:01:30,520 --> 00:01:33,740
+I was so lucky that then I got a job to search.
+
+31
+00:01:35,080 --> 00:01:37,280
+But I'm not searching for the ultimate reality.
+
+32
+00:01:37,640 --> 00:01:39,540
+I'm searching for understanding something more.
+
+33
+00:01:40,080 --> 00:01:46,500
+And I think the idea of the ultimate reality in science, like in philosophy, it's a bad idea.
+
+34
+00:01:46,500 --> 00:01:51,120
+Nowadays, I'm more and more interested in philosophy.
+
+35
+00:01:51,380 --> 00:01:53,000
+I go to philosophy conferences.
+
+36
+00:01:53,240 --> 00:01:55,460
+This is very philosophical, this meeting.
+
+37
+00:01:56,140 --> 00:01:58,260
+I'm invited by philosophy department.
+
+38
+00:01:58,440 --> 00:01:59,540
+I write in philosophy journals.
+
+39
+00:01:59,740 --> 00:02:01,140
+And I read a huge amount of philosophy.
+
+40
+00:02:01,820 --> 00:02:10,280
+And the idea of getting to the bottom, understanding the ultimate nature of reality, what is nature, what is fundamental?
+
+41
+00:02:10,280 --> 00:02:17,620
+It's matter, spirit, it's God, it's perception, it's consciousness, it's language.
+
+42
+00:02:18,420 --> 00:02:19,900
+None of this is fundamental.
+
+43
+00:02:20,880 --> 00:02:24,100
+It's like when we're talking about music before, right?
+
+44
+00:02:24,100 --> 00:02:24,740
+I'm not a musician.
+
+45
+00:02:24,920 --> 00:02:26,900
+Suppose I was a musician.
+
+46
+00:02:27,260 --> 00:02:29,240
+I want to write better and better music.
+
+47
+00:02:29,620 --> 00:02:31,360
+Do I want to write the ultimate music?
+
+48
+00:02:31,520 --> 00:02:33,020
+No, there's no ultimate music.
+
+49
+00:02:33,240 --> 00:02:34,500
+But there is better music.
+
+50
+00:02:34,500 --> 00:02:37,040
+And I think there is better knowledge.
+
+51
+00:02:38,020 --> 00:02:40,140
+Einstein is better than Newton.
+
+52
+00:02:40,540 --> 00:02:41,380
+Newton is very good.
+
+53
+00:02:41,480 --> 00:02:43,580
+It's super, super good and still used a lot.
+
+54
+00:02:43,740 --> 00:02:44,380
+Einstein is better.
+
+55
+00:02:44,800 --> 00:02:46,680
+It's a deeper look into reality.
+
+56
+00:02:47,180 --> 00:02:51,580
+And if all goes right, quantum gravity is a little step ahead.
+
+57
+00:02:53,920 --> 00:02:57,100
+Can't we be happy with lack of knowledge?
+
+58
+00:02:57,960 --> 00:03:01,760
+Was that something that came, this appreciation of not knowing?
+
+59
+00:03:01,980 --> 00:03:02,180
+Yeah.
+
+60
+00:03:02,680 --> 00:03:04,100
+Did that come with age?
+
+61
+00:03:04,100 --> 00:03:07,660
+With age, maybe it's just, you know, you get relaxed with age.
+
+62
+00:03:08,980 --> 00:03:14,520
+I'm asking this out of genuine curiosity because I'll tell you a little bit about my own personal history.
+
+63
+00:03:14,660 --> 00:03:23,280
+So when I was 17, 18, 19, I was obsessed with the existential writers, you know, those kind of depressing European writers.
+
+64
+00:03:23,540 --> 00:03:27,240
+Camus, Dostoevsky, Kafka, you know, all those guys.
+
+65
+00:03:28,000 --> 00:03:31,820
+Like The Myth of Sisyphus by Camus is sort of this foundational book for me.
+
+66
+00:03:31,820 --> 00:03:35,380
+And that quest for meaning was like hugely important.
+
+67
+00:03:35,660 --> 00:03:36,740
+I agonized over that.
+
+68
+00:03:37,520 --> 00:03:38,920
+And I don't anymore.
+
+69
+00:03:39,120 --> 00:03:40,720
+And I've puzzled over that.
+
+70
+00:03:40,860 --> 00:03:43,220
+I mean, you know, maybe I'm, maybe I'm wiser now.
+
+71
+00:03:43,380 --> 00:03:44,760
+That's a lot of lived experience.
+
+72
+00:03:44,920 --> 00:03:47,660
+Since then, you know, I can sort of rationalize this.
+
+73
+00:03:47,660 --> 00:03:52,680
+Or maybe I'm just a little jaded and life isn't as raw as it once was.
+
+74
+00:03:52,760 --> 00:03:54,580
+I'm kind of a little more comfortable.
+
+75
+00:03:54,580 --> 00:03:59,420
+And I don't maybe feel like I need to ask those big questions anymore.
+
+76
+00:03:59,520 --> 00:04:06,160
+So I'm interested in your response partly because you're interested in time and age and, you know, time go together.
+
+77
+00:04:06,160 --> 00:04:10,160
+And I'm just wondering, yeah, we're wiser, I guess, as we're older.
+
+78
+00:04:10,320 --> 00:04:16,220
+But do we also lose something when we no longer have that rawness of being young?
+
+79
+00:04:16,920 --> 00:04:17,360
+Yeah.
+
+80
+00:04:18,720 --> 00:04:19,160
+Yeah.
+
+81
+00:04:19,460 --> 00:04:20,200
+I don't know.
+
+82
+00:04:20,300 --> 00:04:22,380
+I don't know which one of these is.
+
+83
+00:04:22,440 --> 00:04:24,460
+It's probably a combination of those.
+
+84
+00:04:24,560 --> 00:04:26,880
+And I actually have asked the same question to myself.
+
+85
+00:04:27,560 --> 00:04:28,620
+To some extent, yes.
+
+86
+00:04:28,620 --> 00:04:33,440
+You know, I'm much older and happily.
+
+87
+00:04:34,500 --> 00:04:34,940
+Right.
+
+88
+00:04:35,000 --> 00:04:36,720
+I would never want to go back to those.
+
+89
+00:04:36,920 --> 00:04:37,180
+Yeah.
+
+90
+00:04:38,440 --> 00:04:44,100
+It's nothing hard as being a 20-year-old boy, especially if girls are not.
+
+91
+00:04:45,320 --> 00:04:48,780
+And life has been nice.
+
+92
+00:04:49,200 --> 00:04:53,720
+And I'm more content with what I have.
+
+93
+00:04:53,920 --> 00:04:54,720
+So that's one thing.
+
+94
+00:04:54,800 --> 00:04:56,000
+Another thing is historical.
+
+95
+00:04:56,240 --> 00:04:58,160
+I mean, that period I remember very well.
+
+96
+00:04:58,160 --> 00:05:02,480
+I also was reading Sartre and Camus and all this anguish.
+
+97
+00:05:02,880 --> 00:05:06,780
+And Tostoyevsky was my absolute, is still now my preferred writer.
+
+98
+00:05:07,420 --> 00:05:13,700
+That was the after Second World War, when Europe had just committed a dramatic suicide in two acts,
+
+99
+00:05:13,880 --> 00:05:15,040
+First and Second World War.
+
+100
+00:05:15,580 --> 00:05:20,600
+The European intellectual scene was totally confused and desperate.
+
+101
+00:05:20,800 --> 00:05:21,500
+What have we done?
+
+102
+00:05:21,500 --> 00:05:27,640
+We thought we were the pinnacle of civilization and master of the world and ourselves.
+
+103
+00:05:27,640 --> 00:05:32,560
+And the only thing we were able to do is to massacre one another and destroy the continent.
+
+104
+00:05:32,560 --> 00:05:39,080
+I mean, this is a moment of profound spiritual dispersion and being lost.
+
+105
+00:05:39,860 --> 00:05:40,880
+The times have changed.
+
+106
+00:05:41,280 --> 00:05:42,520
+We're not in much better times.
+
+107
+00:05:42,600 --> 00:05:44,780
+We're going probably to the same horror again.
+
+108
+00:05:44,780 --> 00:05:52,880
+But besides the two things, I think it was a real intellectual step ahead for me.
+
+109
+00:05:53,740 --> 00:06:02,160
+Reading philosophers like Wittgenstein or Nagarjuna, a great Buddhist philosopher, had a big, big intellectual impact on me.
+
+110
+00:06:02,160 --> 00:06:08,760
+And both of them, from completely different traditions, from completely different, two millennia of difference between the two,
+
+111
+00:06:09,300 --> 00:06:16,740
+in common, they have this message, which is, you know, be very careful because you're asking questions which are meaningless.
+
+112
+00:06:17,000 --> 00:06:19,920
+And you're torturing yourself on questions which are meaningless.
+
+113
+00:06:19,920 --> 00:06:27,100
+So one thing that some people who are sort of searching for that, I don't want to call it ultimate reality, but deeper reality,
+
+114
+00:06:27,500 --> 00:06:30,960
+is they seek out transcendent experiences.
+
+115
+00:06:31,260 --> 00:06:32,460
+I mean, it could be psychedelics.
+
+116
+00:06:33,000 --> 00:06:34,660
+It could be something else.
+
+117
+00:06:35,040 --> 00:06:40,960
+And does transcendence, does that have resonance for you or transcendent experiences, are those important to you?
+
+118
+00:06:40,960 --> 00:06:51,460
+I was thinking this morning, because I was talking about that, there are certain experiences which are, you know, powerful, changing,
+
+119
+00:06:51,940 --> 00:06:54,280
+taking you outside your normal reality.
+
+120
+00:06:55,380 --> 00:07:00,700
+There are mystical experiences, there are psychedelic experiences, or even, you know, when you're completely in love.
+
+121
+00:07:01,120 --> 00:07:07,840
+So we have an everyday life we go through and then something breaks and we see something completely new, completely different,
+
+122
+00:07:07,980 --> 00:07:09,680
+elsewhere, it's true.
+
+123
+00:07:09,680 --> 00:07:20,640
+Now, is this transcendence in the sense that I should think of the world as the material reality here, which I see every day,
+
+124
+00:07:20,760 --> 00:07:23,820
+and something else, which I rarely, no, no, no.
+
+125
+00:07:23,880 --> 00:07:32,700
+I don't think that there is any substantial metaphysical break of the world between immanent and transcendent,
+
+126
+00:07:32,840 --> 00:07:37,660
+between mind and matter, between spirit and body.
+
+127
+00:07:37,660 --> 00:07:44,780
+So going back to, like, your first LSD experience when you were 17, it changed the way you think.
+
+128
+00:07:44,960 --> 00:07:45,120
+Yeah.
+
+129
+00:07:45,460 --> 00:07:50,660
+But it didn't, you don't necessarily think it sort of put you in touch with some deeper sense of reality.
+
+130
+00:07:50,660 --> 00:08:01,200
+Not anymore than the way the first time I looked into the microscope and what looked like water,
+
+131
+00:08:01,740 --> 00:08:04,960
+to my astonishment, everybody's gone through that.
+
+132
+00:08:06,040 --> 00:08:10,380
+You know, there's little bugs moving there, there's incredible richness of things happening.
+
+133
+00:08:10,380 --> 00:08:16,420
+And wow, I've, yes, I've seen more of reality, but it's not transcendent.
+
+134
+00:08:16,500 --> 00:08:18,800
+It's just, you know, bugs down there swimming in the water.
+
+135
+00:08:19,120 --> 00:08:21,340
+It's amazement is what it sounds like.
+
+136
+00:08:21,340 --> 00:08:21,620
+It's amazement.
+
+137
+00:08:21,800 --> 00:08:30,000
+It's amazement and it's the realization that reality is far more complex than what we view in our day life.
+
+138
+00:08:30,000 --> 00:08:31,760
+So I think this is a point.
+
+139
+00:08:32,400 --> 00:08:39,840
+If we think that what reality is, is this cup, this table, you and I, a conversation, day and night,
+
+140
+00:08:39,980 --> 00:08:45,260
+and that's basically what the world is about, we're completely wrong, okay?
+
+141
+00:08:45,720 --> 00:08:50,700
+That's the world, what the world is completely wrong for us at our scale at this, you know,
+
+142
+00:08:50,760 --> 00:08:53,880
+one meter, kilometers, hundred kilometers, a few years.
+
+143
+00:08:53,880 --> 00:09:01,300
+But at just the scale of the microscope would see, or quantum gravity would see, or a cosmos,
+
+144
+00:09:02,400 --> 00:09:03,720
+reality is far more complicated.
+
+145
+00:09:03,940 --> 00:09:04,860
+There are all these layers.
+
+146
+00:09:05,220 --> 00:09:10,420
+So once you realize that there are all these layers, all this complexity, all this,
+
+147
+00:09:11,180 --> 00:09:17,360
+to split the world into an immanent and a transcendent, it's just silly.
+
+148
+00:09:17,680 --> 00:09:19,680
+I mean, there's more richness than that.
+
+149
+00:09:20,380 --> 00:09:21,360
+So I want to come back.
+
+150
+00:09:21,360 --> 00:09:24,980
+I want to pick up a thread from earlier in the conversation, going back to politics.
+
+151
+00:09:25,260 --> 00:09:25,440
+Okay.
+
+152
+00:09:25,540 --> 00:09:29,020
+And you were saying that, you know, you're active student radical.
+
+153
+00:09:29,340 --> 00:09:33,840
+At a certain point, you just felt like you and your movement had failed.
+
+154
+00:09:34,140 --> 00:09:38,520
+And so you went into physics at that point, you know, maybe changing the world in that sense.
+
+155
+00:09:38,820 --> 00:09:41,520
+But I know you have remained active politically.
+
+156
+00:09:41,720 --> 00:09:48,580
+I mean, you, a few years ago, you helped get a bunch of Nobel Prize winners to sign a letter.
+
+157
+00:09:48,580 --> 00:09:59,240
+I think more than 50, by signing a letter, what, to reduce military spending and instead use that money for dealing with climate change and poverty and, you know, real social and environmental issues.
+
+158
+00:10:00,140 --> 00:10:06,740
+And I guess I'm wondering if that's, is that just an entirely separate enterprise from what you do as a physicist?
+
+159
+00:10:06,740 --> 00:10:09,500
+Or are they connected in some way?
+
+160
+00:10:10,880 --> 00:10:14,140
+Well, for me, they're connected because that's all me.
+
+161
+00:10:14,300 --> 00:10:34,880
+And in a sense, when I, in my late 20s, got into full immersion into science and started spending my time doing calculations and being in front of Blackwood with my friends and colleagues for days, months, years, I was missing the social engagement.
+
+162
+00:10:34,880 --> 00:10:37,960
+And I was even feeling a little bit guilty.
+
+163
+00:10:38,440 --> 00:10:39,760
+It's not, I'm not going to change the world.
+
+164
+00:10:39,880 --> 00:10:40,560
+I learned that.
+
+165
+00:10:41,180 --> 00:10:48,800
+But yet, the good part of the world is thanks to a lot of people who have believed in a better world and worked for it.
+
+166
+00:10:49,080 --> 00:10:53,800
+Worked for, I don't know, equality of human, abolition of slavery, abolition of death penalty.
+
+167
+00:10:54,500 --> 00:10:56,340
+You know, democracy didn't come for free.
+
+168
+00:10:56,500 --> 00:10:58,380
+People fought for it and so on.
+
+169
+00:10:58,380 --> 00:11:05,260
+Now, more recently, I went back to some sort of engagement like the one you mentioned.
+
+170
+00:11:05,780 --> 00:11:07,220
+Not very successful either.
+
+171
+00:11:08,040 --> 00:11:09,160
+It's a second time.
+
+172
+00:11:09,600 --> 00:11:13,300
+Well, in terms of if you actually, you know, get countries to reduce their military spending.
+
+173
+00:11:13,480 --> 00:11:13,600
+Yes.
+
+174
+00:11:13,940 --> 00:11:19,820
+Well, the idea was, you know, the idea of that thing and all this Nobel Prize, I got the signature of 60 Nobel Prizes.
+
+175
+00:11:19,820 --> 00:11:24,640
+And the idea was not to ask your own government to reduce military spending.
+
+176
+00:11:25,100 --> 00:11:33,120
+The idea was to ask your own government to start negotiating worldwide for a global common reduction of military spending.
+
+177
+00:11:33,980 --> 00:11:35,300
+Keeping the balance of power.
+
+178
+00:11:35,780 --> 00:11:44,280
+So asking, you know, my country decreased by 2% military spending, but also our enemies, so to say, decreased.
+
+179
+00:11:44,280 --> 00:11:49,900
+So the most stupid things we humans do is to kill one another and fight.
+
+180
+00:11:50,320 --> 00:11:50,860
+It's obvious.
+
+181
+00:11:51,020 --> 00:11:53,780
+I mean, if we collaborate, everything gets better for everybody.
+
+182
+00:11:54,140 --> 00:11:57,380
+And then we start fighting again because we're irrational.
+
+183
+00:11:57,580 --> 00:12:05,920
+I think that humankind has just one single enemy, its own irrationality that pushes one against the other one.
+
+184
+00:12:05,920 --> 00:12:20,060
+And I think the people like me who have the privilege of being paying for thinking, essentially, intellectuals in different kinds, have a duty of, you know, I've been paying for thinking.
+
+185
+00:12:20,180 --> 00:12:21,920
+So let me tell you what I'm thinking.
+
+186
+00:12:22,460 --> 00:12:24,380
+Not just on physics.
+
+187
+00:12:24,900 --> 00:12:25,760
+Well, I mean, yes.
+
+188
+00:12:25,900 --> 00:12:29,780
+I mean, I was struck by you said you were starting to feel a little guilty.
+
+189
+00:12:29,780 --> 00:12:36,340
+You know, and I guess the question is, you know, feeling a little guilty if you weren't politically engaged in some way.
+
+190
+00:12:36,460 --> 00:12:44,820
+And it raises the question of whether, no matter how cool, how amazing the science of quantum gravity might be, is...
+
+191
+00:12:44,820 --> 00:12:46,160
+Is not the most important thing.
+
+192
+00:12:46,260 --> 00:12:47,260
+Yeah, I mean, yeah.
+
+193
+00:12:47,380 --> 00:12:49,580
+Is there an ethics to this?
+
+194
+00:12:49,760 --> 00:12:52,360
+I mean, I don't want to get too heavy-handed here, but I don't know.
+
+195
+00:12:52,400 --> 00:12:53,280
+How do you think about that?
+
+196
+00:12:53,340 --> 00:12:57,040
+I mean, it's sort of the responsibility of the intellectual, the responsibility of the scientist.
+
+197
+00:12:57,040 --> 00:13:10,680
+So the responsibility of the scientists, the physicists in particular, have the burden of the nuclear weapons that have the poison gift they're given to humankind, which are seriously risking today to destroy us.
+
+198
+00:13:11,860 --> 00:13:16,460
+Look, my reading of the world is that we're going toward another catastrophe.
+
+199
+00:13:17,020 --> 00:13:23,240
+The West has dominated the world for two or three centuries, is losing its power, but doesn't want to lose it.
+
+200
+00:13:23,240 --> 00:13:29,640
+So it's military-dominating, it's imposing its will to the rest of the planet, the rest of the planet is not happy.
+
+201
+00:13:29,980 --> 00:13:32,820
+This is a dramatically unstable situation.
+
+202
+00:13:34,060 --> 00:13:36,320
+And everybody's demonizing everybody else.
+
+203
+00:13:36,500 --> 00:13:43,380
+So for the Americans, the Russians are all very, very nasty, and so are the Chinese, and vice versa, and so on and so forth.
+
+204
+00:13:44,080 --> 00:13:47,080
+We have in front of us a recipe for a total disaster.
+
+205
+00:13:47,080 --> 00:13:50,340
+Now, humans sometimes are reasonable, right?
+
+206
+00:13:50,500 --> 00:14:02,900
+I mean, the Soviet Union, the United States sat down and destroyed 80% of their nuclear arsenal, not little because of the push of scientists, the physicists, that, you know, feeling guilty for what they've done.
+
+207
+00:14:03,400 --> 00:14:06,300
+They said, careful, I mean, just please be reasonable.
+
+208
+00:14:06,600 --> 00:14:13,820
+And Gorbachev is on record of saying that the effect of the scientists pushed him toward that.
+
+209
+00:14:14,080 --> 00:14:15,660
+So why are we not doing the same again?
+
+210
+00:14:15,660 --> 00:14:32,660
+I think that in this moment in which belligerence is growing everywhere, any voice that raises and says, calm down, bring down the heat, discuss, sit, it's a good voice.
+
+211
+00:14:33,280 --> 00:14:33,840
+Yeah, yeah.
+
+212
+00:14:34,080 --> 00:14:37,520
+So we were talking earlier about the wonder of science.
+
+213
+00:14:37,620 --> 00:14:41,840
+I mean, you were just saying it was just amazing, you know, when you first got into doing physics.
+
+214
+00:14:42,840 --> 00:14:44,640
+Is there a politics of wonder?
+
+215
+00:14:45,660 --> 00:14:49,000
+Ah, it is a politics of wonder.
+
+216
+00:14:50,360 --> 00:14:50,580
+Huh.
+
+217
+00:14:52,500 --> 00:14:53,440
+Probably, yes.
+
+218
+00:14:53,640 --> 00:14:54,060
+I don't know.
+
+219
+00:14:54,120 --> 00:14:55,480
+I never thought in these terms.
+
+220
+00:14:56,580 --> 00:14:57,740
+You surprised me here.
+
+221
+00:14:58,460 --> 00:15:02,420
+Wonder is something that makes you change, right?
+
+222
+00:15:02,760 --> 00:15:06,200
+It's exactly what happens when you break out from your routine.
+
+223
+00:15:06,200 --> 00:15:12,520
+You wonder because you discover a new idea, because you're a new person, because you're an experience.
+
+224
+00:15:13,520 --> 00:15:18,560
+Wonder is, for Aristotle, is what starts the philosophical research.
+
+225
+00:15:19,660 --> 00:15:24,320
+Wonder triggers curiosity and triggers desire to know.
+
+226
+00:15:24,320 --> 00:15:25,320
+Right.
+
+227
+00:15:25,360 --> 00:15:28,280
+I mean, he said all philosophy starts in wonder, I believe.
+
+228
+00:15:28,280 --> 00:15:30,140
+He says all philosophy starts in wonder.
+
+229
+00:15:30,320 --> 00:15:30,400
+Yeah.
+
+230
+00:15:30,400 --> 00:15:35,960
+I mean, he says you wonder and then you start thinking and you start, but thinking mean not
+
+231
+00:15:35,960 --> 00:15:39,700
+being content with the current worldview that you have?
+
+232
+00:15:39,700 --> 00:15:41,700
+I think, yes.
+
+233
+00:15:41,760 --> 00:15:46,420
+And in a sense, oversimplifying, there are two ways of going through life.
+
+234
+00:15:46,540 --> 00:15:48,820
+One is that, well, I know the thing there is to know.
+
+235
+00:15:48,920 --> 00:15:49,920
+I know what I have to do.
+
+236
+00:15:50,160 --> 00:15:52,340
+And the world is what it is.
+
+237
+00:15:52,340 --> 00:15:56,540
+And politically, what is around me, it is fine, no problem.
+
+238
+00:15:57,940 --> 00:16:02,500
+And we are in a very good world from many perspectives, no doubt.
+
+239
+00:16:02,700 --> 00:16:08,920
+We have a fantastically good world, even folding in the current world and, you know, 800 million
+
+240
+00:16:08,920 --> 00:16:12,000
+people who don't have enough food today on the planet.
+
+241
+00:16:12,860 --> 00:16:20,140
+But, you know, in past centuries it was worse, thanks to people who could not take the present
+
+242
+00:16:20,140 --> 00:16:27,940
+for granted and dream something new because they had an idea that fascinated them and because
+
+243
+00:16:27,940 --> 00:16:29,460
+they had wonder.
+
+244
+00:16:30,260 --> 00:16:32,740
+And science is clearly motivated to wonder.
+
+245
+00:16:32,740 --> 00:16:34,280
+You know, there's this funny thing.
+
+246
+00:16:34,440 --> 00:16:42,960
+Scientists had to control their own emotions and they built up this picture of science, which
+
+247
+00:16:42,960 --> 00:16:44,360
+is emotionless.
+
+248
+00:16:44,640 --> 00:16:44,740
+Right.
+
+249
+00:16:44,820 --> 00:16:48,180
+I mean, you're going to corrupt the science if you let your emotions into it.
+
+250
+00:16:48,180 --> 00:16:52,340
+You're going to corrupt the science, which is to some extent is true, but emotions is
+
+251
+00:16:52,340 --> 00:16:55,820
+the fool that pushes science.
+
+252
+00:16:55,960 --> 00:16:58,720
+Otherwise, who would be interested in learning something else?
+
+253
+00:16:58,860 --> 00:17:02,760
+Because you're curious, because you want to look at the planet and you say, why do they
+
+254
+00:17:02,760 --> 00:17:05,360
+go around that way around us?
+
+255
+00:17:06,040 --> 00:17:08,180
+You know, you study general activity, wow.
+
+256
+00:17:08,640 --> 00:17:11,740
+And then you say, how does it go together with quantum?
+
+257
+00:17:12,160 --> 00:17:12,620
+And so on.
+
+258
+00:17:12,620 --> 00:17:16,740
+Is this, and it makes our life so much better, right?
+
+259
+00:17:17,020 --> 00:17:21,460
+To some extent, children who wonder all the time have a wonderful life.
+
+260
+00:17:21,900 --> 00:17:22,120
+Yeah.
+
+261
+00:17:22,320 --> 00:17:27,460
+But I love your, when I, you know, asked about the politics of wonder, imagining what a better
+
+262
+00:17:27,460 --> 00:17:28,480
+world would be.
+
+263
+00:17:28,620 --> 00:17:28,800
+Yeah.
+
+264
+00:17:29,640 --> 00:17:33,060
+I mean, so, because, you know, often wonder, we just think of it, oh, it's like you, you,
+
+265
+00:17:33,140 --> 00:17:36,500
+you know, you walk out in a beautiful forest and that's wonderful.
+
+266
+00:17:36,500 --> 00:17:39,300
+But it's, it's imagining the better world.
+
+267
+00:17:39,460 --> 00:17:40,080
+That's, wow.
+
+268
+00:17:40,980 --> 00:17:41,200
+Yeah.
+
+269
+00:17:41,540 --> 00:17:44,880
+To imagine if there was no war and we could all live in peace.
+
+270
+00:17:45,220 --> 00:17:45,420
+Yeah.
+
+271
+00:17:45,780 --> 00:17:47,540
+So I have one final question.
+
+272
+00:17:47,540 --> 00:17:47,780
+Yeah.
+
+273
+00:17:47,780 --> 00:17:49,420
+Related to what we were just talking about.
+
+274
+00:17:49,540 --> 00:17:54,340
+I mentioned that this podcast that we're starting called Wonder Cabinet, and we're just sort
+
+275
+00:17:54,340 --> 00:17:59,820
+of playing around with this kind of imaginary exercise of, if there is an imaginary wonder
+
+276
+00:17:59,820 --> 00:18:02,620
+cabinet, you know, a cabinet of wonders, cabinet of curiosities.
+
+277
+00:18:02,620 --> 00:18:09,580
+In the modern age, in the 21st century, we're sort of trying to collect a library of wonders.
+
+278
+00:18:10,140 --> 00:18:17,360
+So if there was like an object or a concept or an experience or whatever it might be, one
+
+279
+00:18:17,360 --> 00:18:21,280
+thing that you'd want to put into that cabinet of wonders, anything come to mind?
+
+280
+00:18:22,300 --> 00:18:23,500
+I don't know.
+
+281
+00:18:23,580 --> 00:18:28,940
+I didn't think about that, but you pushed me to discuss, to ask so much about this idea
+
+282
+00:18:28,940 --> 00:18:30,320
+that there's no ultimate reality.
+
+283
+00:18:30,320 --> 00:18:32,920
+Can I put this notion into your cabinet of wonders?
+
+284
+00:18:33,100 --> 00:18:33,740
+Yeah, absolutely.
+
+285
+00:18:34,680 --> 00:18:38,200
+The absence of an ultimate reality, specifically.
+
+286
+00:18:38,640 --> 00:18:38,920
+Okay.
+
+287
+00:18:39,320 --> 00:18:46,300
+This idea that we live in a world of relations, which are sort of mirrors, reflecting mirrors.
+
+288
+00:18:47,980 --> 00:18:48,460
+Wow.
+
+289
+00:18:48,580 --> 00:18:48,780
+Okay.
+
+290
+00:18:48,800 --> 00:18:49,740
+I have to think about that.
+
+291
+00:18:49,880 --> 00:18:55,160
+That's the wonderful thing you would put in the cabinet of wonders, is forgetting, abolishing
+
+292
+00:18:55,160 --> 00:18:57,000
+the idea that there is ultimate reality.
+
+293
+00:18:57,000 --> 00:19:05,160
+Yeah, and I find it beautiful, liberating, sort of full of light, and powerful, incredibly
+
+294
+00:19:05,160 --> 00:19:05,660
+powerful.
+
+295
+00:19:06,400 --> 00:19:10,260
+It leaves space open for everything.
+
+296
+00:19:11,260 --> 00:19:13,000
+It leaves freedom, in a sense.
+
+297
+00:19:13,520 --> 00:19:15,080
+It's okay for you for the cabinet?
+
+298
+00:19:15,440 --> 00:19:16,500
+You want something more concrete?
+
+299
+00:19:16,520 --> 00:19:17,900
+No, no, that is wonderful.
+
+300
+00:19:18,020 --> 00:19:18,440
+I love it.
+
+301
+00:19:18,500 --> 00:19:18,720
+Okay.
+
+302
+00:19:19,900 --> 00:19:20,440
+Thank you.
+
+303
+00:19:20,480 --> 00:19:21,360
+This has been such a pleasure.
+
+304
+00:19:21,700 --> 00:19:22,080
+Thank you.
+
+305
+00:19:22,140 --> 00:19:22,860
+Thank you very much.
+
+306
+00:19:22,860 --> 00:19:27,960
+That's the physicist, Carlo Rivelli, talking with us from the Island of Knowledge Think Tank
+
+307
+00:19:27,960 --> 00:19:32,900
+near Siena, where scientists and philosophers and writers gather in an old chapel under the
+
+308
+00:19:32,900 --> 00:19:33,540
+olive trees.
+
+309
+00:19:34,080 --> 00:19:36,900
+We'll be back with more interviews from Italy in the coming months.
+
+310
+00:19:37,660 --> 00:19:41,660
+Wonder Cabinet is produced in Madison, Wisconsin, at our home studios.
+
+311
+00:19:42,360 --> 00:19:44,520
+Our audio engineer is Steve Gotcher.
+
+312
+00:19:45,020 --> 00:19:46,420
+Theme music by Joe Hartke.
+
+313
+00:19:46,420 --> 00:19:48,780
+And our digital producer is Mark Rickers.
+
+314
+00:19:49,060 --> 00:19:53,540
+Support for the Island of Knowledge and Wonder Cabinet comes from Dartmouth College and the
+
+315
+00:19:53,540 --> 00:19:54,760
+John Templeton Foundation.
+
+316
+00:19:55,700 --> 00:19:56,700
+I'm Steve Paulson.
+
+317
+00:19:56,940 --> 00:19:58,020
+And I'm Anne Strangehamps.
+
+318
+00:19:58,240 --> 00:20:01,740
+Thanks for listening, and stay tuned for the next episode of Wonder Cabinet.
+
+319
+00:20:02,020 --> 00:20:08,160
+I'll be talking with writer and activist Rebecca Solnit about the moral value of hope and wonder
+
+320
+00:20:08,160 --> 00:20:09,820
+during difficult times.
+
+321
+00:20:10,140 --> 00:20:12,220
+And meanwhile, we'd love to hear from you.
+
+322
+00:20:12,220 --> 00:20:17,940
+Send your questions and comments, and sign up for our newsletter at wondercabinetproductions.com.
+
+323
+00:20:18,580 --> 00:20:19,660
+See you next time.
+

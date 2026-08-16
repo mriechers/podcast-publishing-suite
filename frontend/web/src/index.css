@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark light;
+  --text-scale: 1;
+  --color-brand-primary: #3b82f6;
+  --color-brand-secondary: #8b5cf6;
+}
+
+/* Apply text scaling and base styles */
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  font-size: calc(16px * var(--text-scale));
+}
+
+/* Focus-visible styles for keyboard navigation */
+*:focus-visible {
+  outline: 2px solid var(--color-brand-primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* Remove default focus for mouse users */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Ensure main content can receive focus without visible outline */
+#main-content:focus {
+  outline: none;
+}
+
+/* Screen reader only text */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Reduced motion support for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* User-activated reduced motion */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* High contrast mode enhancements */
+.high-contrast {
+  --text-contrast-boost: 1.2;
+}
+
+.high-contrast body {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+.high-contrast .bg-gray-900 {
+  background-color: #000000 !important;
+}
+
+.high-contrast .bg-gray-800 {
+  background-color: #111111 !important;
+}
+
+.high-contrast .bg-gray-700 {
+  background-color: #1a1a1a !important;
+}
+
+.high-contrast .text-gray-400 {
+  color: #cccccc !important;
+}
+
+.high-contrast .text-gray-300 {
+  color: #e5e5e5 !important;
+}
+
+.high-contrast .border-gray-700 {
+  border-color: #444444 !important;
+}
+
+.high-contrast .border-gray-600 {
+  border-color: #555555 !important;
+}
