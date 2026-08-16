@@ -1,0 +1,23 @@
+_metadata:
+  major_version: 2
+  minor_version: 1
+
+display_information:
+  name: "Your Helpful MarkBot!"
+  description: Wonder Cabinet Productions publishing notifications
+  long_description: >-
+    Centralized Slack bot for the podcast publishing suite. Posts transcription
+    notifications, release schedule alerts, and other pipeline updates as a
+    single bot identity.
+  background_color: "#10a544"
+
+features:
+  bot_user:
+    display_name: "Your Helpful MarkBot!"
+    always_online: false
+
+oauth_config:
+  scopes:
+    bot:
+      - chat:write
+      - chat:write.public
