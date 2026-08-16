@@ -66,7 +66,7 @@ stripe listen --forward-to http://localhost:2368/members/webhooks/stripe/
 After running this the CLI will return a secret prefixed with `whsec_`. This secret needs to be given to Ghost on start up. In a new CLI window run the following:
 
 ```bash
-WEBHOOK_SECRET=whsec_1234567890abcdefg ghost start
+WEBHOOK_SECRET=whsec_EXAMPLE_REPLACE_WITH_YOUR_OWN ghost start
 ```
 
 After following these steps, Ghost will run locally with a webhook connection to your Stripe account. To test that it’s working, sign up for a paid membership on the local site.
