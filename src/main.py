@@ -587,6 +587,57 @@ def sync_episodes(
     return result
 
 
+def _resolve_dry_run(cli_value: Optional[bool], config_value: bool, env_name: str) -> tuple[bool, str]:
+    """Resolve dry_run from CLI flag + ambient config, CLI always wins.
+
+    `cli_value` is tri-state (None/True/False) so an explicit `--no-dry-run`
+    can be told apart from "flag not given at all" — deliberately NOT the
+    `args.dry_run or config.dry_run` pattern, which lets DRY_RUN=true in the
+    env file win even when the operator explicitly asked for a real run, with
+    no CLI escape hatch at all.
+
+    Args:
+        cli_value: args.dry_run — None if unspecified, else True/False.
+        config_value: config.dry_run (from DRY_RUN in .env.{env_name}).
+        env_name: Environment name, for the human-readable source note.
+
+    Returns:
+        (resolved dry_run value, human-readable note on where it came from).
+    """
+    if cli_value is not None:
+        note = "--dry-run flag" if cli_value else "--no-dry-run flag"
+        return cli_value, note
+
+    if config_value:
+        return True, f"forced by DRY_RUN in .env.{env_name}"
+    return False, f"default, DRY_RUN unset/false in .env.{env_name}"
+
+
+def _resolve_source(cli_value: Optional[str], config_use_api: bool, env_name: str) -> tuple[str, bool, str]:
+    """Resolve episode source from CLI flag + ambient config, CLI always wins.
+
+    Same tri-state precedence as _resolve_dry_run: `--source rss` must be
+    able to override PRX_USE_API=true in the env file (previously
+    `source == "api" or config.use_dovetail_api" gave config veto power over
+    an explicit `--source rss`, with no way to force RSS mode short of
+    editing the env file).
+
+    Args:
+        cli_value: args.source — None if unspecified, else "api"/"rss".
+        config_use_api: config.use_dovetail_api (from PRX_USE_API in the env).
+        env_name: Environment name, for the human-readable source note.
+
+    Returns:
+        (resolved source string, resolved use_api bool, source note).
+    """
+    if cli_value is not None:
+        return cli_value, cli_value == "api", f"--source {cli_value} flag"
+
+    if config_use_api:
+        return "api", True, f"PRX_USE_API in .env.{env_name}"
+    return "rss", False, f"default, PRX_USE_API unset/false in .env.{env_name}"
+
+
 def cmd_sync(args: argparse.Namespace) -> int:
     """Handle the sync command.
 
@@ -601,11 +652,17 @@ def cmd_sync(args: argparse.Namespace) -> int:
         logger.error(f"Configuration error: {e}")
         return EXIT_CONFIG_ERROR
 
-    # Override config with CLI args
+    # Override config with CLI args.
+    #
+    # status uses a plain `or`: --status only ever comes in as None or one of
+    # the two valid choices, both truthy, so there's no ambiguity between
+    # "unspecified" and an explicit falsy value. dry_run and source are NOT
+    # like that — see _resolve_dry_run/_resolve_source docstrings — so they
+    # go through explicit tri-state resolvers instead.
     status = args.status or config.publish_status
-    dry_run = args.dry_run or config.dry_run
+    dry_run, dry_run_note = _resolve_dry_run(args.dry_run, config.dry_run, args.env)
     feed_type = args.feed_type
-    source = args.source
+    source, use_api, source_note = _resolve_source(args.source, config.use_dovetail_api, args.env)
     json_output = getattr(args, 'json_output', False)
     skip_confirm = getattr(args, 'yes', False)
 
@@ -635,9 +692,6 @@ def cmd_sync(args: argparse.Namespace) -> int:
             logger.info("Aborted.")
             return EXIT_SUCCESS
 
-    # Determine if we should use API
-    use_api = source == "api" or config.use_dovetail_api
-
     # Determine feed URL (for RSS mode)
     if args.feed_url:
         feed_url = args.feed_url
@@ -647,7 +701,10 @@ def cmd_sync(args: argparse.Namespace) -> int:
         feed_url = config.prx_feed_url
 
     logger.info(f"Environment: {args.env} ({config.ghost_url})")
-    logger.info(f"Starting sync (source={source}, feed_type={feed_type}, status={status}, dry_run={dry_run})")
+    logger.info(
+        f"Starting sync (source={source} [{source_note}], feed_type={feed_type}, "
+        f"status={status}, dry_run={dry_run} [{dry_run_note}])"
+    )
 
     # Initialize state tracker and acquire lock for incremental sync
     tracker = StateTracker(config.state_file)
@@ -1493,14 +1550,14 @@ def cmd_update_transcripts(args: argparse.Namespace) -> int:
     return 0 if failed == 0 else 1
 
 
-def main(argv: Optional[list[str]] = None) -> int:
-    """Main entry point.
+def build_parser() -> argparse.ArgumentParser:
+    """Build the CLI argument parser.
 
-    Args:
-        argv: Command-line arguments (defaults to sys.argv[1:]).
+    Factored out from main() so tests can exercise argument parsing
+    (defaults, tri-state flags) without invoking any command logic.
 
     Returns:
-        Exit code.
+        Configured ArgumentParser.
     """
     parser = argparse.ArgumentParser(
         prog="prx-to-ghost",
@@ -1532,8 +1589,14 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     sync_parser.add_argument(
         "--dry-run",
-        action="store_true",
-        help="Fetch and transform but don't publish",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help=(
+            "Force dry-run (--dry-run) or force a real run (--no-dry-run), "
+            "overriding DRY_RUN in .env.{env}. Default: unspecified, defers "
+            "to DRY_RUN (which itself defaults to false — real writes — if "
+            "also unset)."
+        ),
     )
     sync_parser.add_argument(
         "--guid",
@@ -1561,8 +1624,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     sync_parser.add_argument(
         "--source",
         choices=["api", "rss"],
-        default="rss",
-        help="Episode source: 'api' for Dovetail API, 'rss' for RSS feed (default: rss)",
+        default=None,
+        help=(
+            "Episode source: 'api' for Dovetail API, 'rss' for RSS feed. "
+            "An explicit choice overrides PRX_USE_API in .env.{env}. "
+            "Default: unspecified, defers to PRX_USE_API (defaults true)."
+        ),
     )
     sync_parser.add_argument(
         "--export-transcripts",
@@ -1688,17 +1755,24 @@ def main(argv: Optional[list[str]] = None) -> int:
     )
     transcript_parser.set_defaults(func=cmd_update_transcripts)
 
-    # Set defaults on the main parser so no-subcommand invocation works
+    # Set defaults on the main parser so no-subcommand invocation works.
+    #
+    # dry_run and source default to None (not False/"rss") — that's the
+    # tri-state sentinel _resolve_dry_run/_resolve_source rely on to defer
+    # to ambient config when the flag truly wasn't given. A concrete default
+    # here would be indistinguishable from an explicit --no-dry-run or
+    # --source rss, and would silently defeat DRY_RUN/PRX_USE_API in the env
+    # file when this bare (no-subcommand) invocation path is used.
     parser.set_defaults(
         func=cmd_sync,
         status=None,
-        dry_run=False,
+        dry_run=None,
         guid=None,
         limit=None,
         file=None,
         feed_type="ttbook",
         feed_url=None,
-        source="rss",
+        source=None,
         export_transcripts=False,
         generate_peaks=False,
         peaks_dir=None,
@@ -1708,6 +1782,19 @@ def main(argv: Optional[list[str]] = None) -> int:
         yes=False,
     )
 
+    return parser
+
+
+def main(argv: Optional[list[str]] = None) -> int:
+    """Main entry point.
+
+    Args:
+        argv: Command-line arguments (defaults to sys.argv[1:]).
+
+    Returns:
+        Exit code.
+    """
+    parser = build_parser()
     args = parser.parse_args(argv)
 
     # Set log level

@@ -273,3 +273,110 @@ class TestUpdatePostMetadata:
         assert set(post_data.keys()) == {
             "updated_at", "tags", "codeinjection_head", "canonical_url",
         }
+
+
+class TestConnectionCheck:
+    """Validate test_connection() actually authenticates.
+
+    Regression coverage for a false-green bug: /site/ doesn't require auth
+    (Ghost returns 200 for it with a bogus key, or no Authorization header
+    at all), so the old test_connection() reported success even when the
+    Admin API key was completely dead. It now hits /posts/?limit=1, which
+    does require a valid key.
+    """
+
+    def _make_client(self) -> GhostClient:
+        key = "test123:" + "0" * 64
+        return GhostClient("https://ghost.example.com", key)
+
+    def test_hits_posts_endpoint_not_site(self):
+        """test_connection must call /posts/, never /site/."""
+        client = self._make_client()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.ok = True
+        mock_response.json.return_value = {"posts": [{"id": "post-1"}]}
+
+        client._session.request = MagicMock(return_value=mock_response)
+
+        result = client.test_connection()
+
+        assert result is True
+        call_args = client._session.request.call_args
+        called_url = call_args[0][1]
+        assert "/posts/" in called_url
+        assert "/site/" not in called_url
+
+    def test_valid_key_returns_true(self):
+        """A 200 from /posts/ means the connection (and key) are good."""
+        client = self._make_client()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.ok = True
+        mock_response.json.return_value = {"posts": [{"id": "post-1"}]}
+
+        client._session.request = MagicMock(return_value=mock_response)
+
+        assert client.test_connection() is True
+
+    def test_bogus_key_raises_401_with_actionable_message(self):
+        """A 401 (bad/revoked key) must raise, not silently pass.
+
+        This is the case the old /site/-based check missed entirely:
+        Ghost's /site/ endpoint returns 200 even for a bogus key, but
+        /posts/ correctly 401s.
+        """
+        client = self._make_client()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        mock_response.ok = False
+        mock_response.json.return_value = {"errors": [{"message": "Unauthorized"}]}
+
+        client._session.request = MagicMock(return_value=mock_response)
+
+        with pytest.raises(GhostAPIError) as exc_info:
+            client.test_connection()
+
+        assert exc_info.value.status_code == 401
+        message = str(exc_info.value)
+        assert "GHOST_ADMIN_API_KEY" in message
+        assert "regenerated" in message or "revoked" in message
+
+    def test_no_auth_header_raises_403(self):
+        """No Authorization header (simulated as a 403) must also raise."""
+        client = self._make_client()
+
+        mock_response = MagicMock()
+        mock_response.status_code = 403
+        mock_response.ok = False
+        mock_response.json.return_value = {"errors": [{"message": "Forbidden"}]}
+
+        client._session.request = MagicMock(return_value=mock_response)
+
+        with pytest.raises(GhostAPIError) as exc_info:
+            client.test_connection()
+
+        assert exc_info.value.status_code == 403
+
+    def test_network_failure_distinguishable_from_bad_key(self):
+        """Connection/DNS failures must not be confused with a 401.
+
+        _request_with_retry wraps requests.exceptions.RequestException in a
+        GhostAPIError with status_code=None, so callers can tell "the key is
+        bad" (401) apart from "we couldn't reach Ghost at all" (None).
+        """
+        client = self._make_client()
+
+        client._session.request = MagicMock(
+            side_effect=requests.exceptions.ConnectionError("DNS lookup failed")
+        )
+
+        with patch("src.ghost_client.time.sleep"):
+            with pytest.raises(GhostAPIError) as exc_info:
+                client.test_connection()
+
+        assert exc_info.value.status_code is None
+        assert "DNS lookup failed" in str(exc_info.value)

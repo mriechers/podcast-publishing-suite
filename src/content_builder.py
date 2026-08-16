@@ -18,6 +18,7 @@ import requests
 from .feed_parser import Episode
 from .ghost_client import GhostPost
 from .content_transforms import transform_title, strip_boilerplate
+from .transcript_provenance import METADATA_LABELS
 
 logger = logging.getLogger(__name__)
 
@@ -549,7 +550,10 @@ def load_transcript(slug: str, cache_dir: Optional[Path] = None) -> Optional[str
             Defaults to sample-data/ttbook-cache/luminous.
 
     Returns:
-        Transcript text or None if not found.
+        Transcript text or None if not found. formatted_transcript.md content
+        is sanitized (frontmatter/postscript/trailing metadata stripped —
+        see _strip_transcript_metadata) before being returned; this is the
+        one place that happens, so callers never see raw file metadata.
     """
     if cache_dir is None:
         # Default to project sample-data
@@ -559,7 +563,7 @@ def load_transcript(slug: str, cache_dir: Optional[Path] = None) -> Optional[str
     formatted_md = cache_dir / 'formatted_transcript.md'
     if formatted_md.exists():
         logger.info(f"Found formatted transcript: {formatted_md}")
-        return formatted_md.read_text()
+        return _strip_transcript_metadata(formatted_md.read_text())
 
     # Fallback to plain transcript.txt
     canonical = cache_dir / 'transcript.txt'
@@ -589,7 +593,10 @@ def load_wc_transcript(episode_title: str, transcript_dir: Optional[Path] = None
             Defaults to project /transcripts.
 
     Returns:
-        Transcript text or None if not found.
+        Transcript text or None if not found. formatted_transcript.md content
+        is sanitized (frontmatter/postscript/trailing metadata stripped —
+        see _strip_transcript_metadata) before being returned; this is the
+        one place that happens, so callers never see raw file metadata.
     """
     if transcript_dir is None:
         transcript_dir = Path(__file__).parent.parent / 'transcripts'
@@ -601,7 +608,7 @@ def load_wc_transcript(episode_title: str, transcript_dir: Optional[Path] = None
     formatted_md = transcript_dir / 'formatted_transcript.md'
     if formatted_md.exists():
         logger.info(f"Found formatted transcript: {formatted_md}")
-        return formatted_md.read_text()
+        return _strip_transcript_metadata(formatted_md.read_text())
 
     # Fallback to plain transcript.txt
     canonical = transcript_dir / 'transcript.txt'
@@ -629,7 +636,7 @@ def load_wc_transcript(episode_title: str, transcript_dir: Optional[Path] = None
                 formatted_subdir = subdir / 'formatted_transcript.md'
                 if formatted_subdir.exists():
                     logger.info(f"Found formatted transcript in subdir: {formatted_subdir}")
-                    return formatted_subdir.read_text()
+                    return _strip_transcript_metadata(formatted_subdir.read_text())
                 # Fallback to any .txt file in matching subdir
                 for txt_file in subdir.glob('*.txt'):
                     logger.info(f"Found transcript in subdir: {txt_file}")
@@ -665,6 +672,42 @@ def is_placeholder_transcript(transcript: str) -> bool:
     return TRANSCRIPT_PLACEHOLDER in transcript and len(transcript.strip()) < 250
 
 
+# Metadata labels that appear as `**Label:** value` lines in formatted
+# transcripts but are never speaker names. Imported from transcript_provenance,
+# which is the single source of truth — it guards the same lines from being read
+# as dialogue, and hand-maintaining a second copy here let the two drift.
+_TRAILING_METADATA_LINE_RE = re.compile(
+    r'^\*\*(?:' + '|'.join(METADATA_LABELS) + r'):\*\*'
+)
+
+
+def _strip_trailing_metadata_lines(text: str) -> str:
+    """Strip trailing `**Label:** value` metadata lines with no preceding `---`.
+
+    _strip_transcript_metadata() (below) handles the documented case where a
+    `---` separator marks the postscript boundary. This covers the case where
+    a status update was appended directly after the last dialogue line with
+    no separator at all — exactly what happened in production: a bare
+    `**Status:** corrected` line (added by a later correction pass) rendered
+    straight into a published Ghost post because nothing stripped it.
+
+    Only ever trims from the end, and only lines that are blank or match the
+    fixed metadata-label list — it stops at the first line that doesn't, so
+    it can never eat into real dialogue. A genuine speaker turn can't be
+    mistaken for one of these labels: speaker lines are always a person's
+    name, never a bare word like "Status" or "Duration".
+    """
+    lines = text.rstrip().split('\n')
+    end = len(lines)
+    while end > 0:
+        line = lines[end - 1].strip()
+        if not line or _TRAILING_METADATA_LINE_RE.match(line):
+            end -= 1
+            continue
+        break
+    return '\n'.join(lines[:end]).rstrip()
+
+
 def _strip_transcript_metadata(text: str) -> str:
     """Strip frontmatter and postscript from a formatted transcript.
 
@@ -674,20 +717,25 @@ def _strip_transcript_metadata(text: str) -> str:
     - Postscript: --- followed by status field and formatting notes
 
     This extracts only the dialogue body between the first and last
-    --- separators. If no separators exist, returns the text unchanged.
+    --- separators, then makes a second, separator-independent pass
+    (_strip_trailing_metadata_lines) to catch trailing metadata that was
+    appended without a `---` at all.
     """
     parts = re.split(r'^---\s*$', text, flags=re.MULTILINE)
     if len(parts) >= 3:
         # Has both frontmatter and postscript — take the middle
-        return '\n'.join(parts[1:-1]).strip()
-    if len(parts) == 2:
+        body = '\n'.join(parts[1:-1]).strip()
+    elif len(parts) == 2:
         # Has only one separator — frontmatter or postscript
         # If the first part looks like metadata (short, has **Key:** lines),
         # take the second part; otherwise take the first
         if re.search(r'^\*\*(Episode|Guest|Hosts|Duration|Status):\*\*', parts[0], re.MULTILINE):
-            return parts[1].strip()
-        return parts[0].strip()
-    return text.strip()
+            body = parts[1].strip()
+        else:
+            body = parts[0].strip()
+    else:
+        body = text.strip()
+    return _strip_trailing_metadata_lines(body)
 
 
 def format_transcript_html(transcript: str) -> str:
@@ -697,11 +745,15 @@ def format_transcript_html(transcript: str) -> str:
     - Markdown (formatted_transcript.md): **Speaker:** dialogue, # headings, ---
     - Plain text (transcript.txt): - [Speaker] dialogue
 
-    For markdown transcripts, strips frontmatter (title, episode metadata)
-    and postscript (status, formatting notes) before rendering.
+    Markdown input is expected to already be sanitized — frontmatter,
+    postscript, and trailing metadata stripped by load_transcript() /
+    load_wc_transcript() at load time (the one place that happens; see
+    _strip_transcript_metadata). This function does not re-sanitize, to
+    avoid two divergent copies of that logic.
 
     Args:
-        transcript: Raw transcript text with speaker attributions.
+        transcript: Transcript text with speaker attributions, as returned
+            by load_transcript()/load_wc_transcript().
 
     Returns:
         HTML formatted transcript.
@@ -712,8 +764,7 @@ def format_transcript_html(transcript: str) -> str:
     # Detect markdown format: has **bold** speaker attributions or # headings
     if re.search(r'^\*\*[^*]+:\*\*', transcript, re.MULTILINE) or transcript.startswith('#'):
         import markdown
-        body = _strip_transcript_metadata(transcript)
-        return markdown.markdown(body)
+        return markdown.markdown(transcript)
 
     lines = transcript.strip().split('\n')
     html_lines = []

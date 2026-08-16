@@ -28,12 +28,23 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# Canonical vocabulary of labels that appear as "Key: value" (or "**Key:** value")
+# lines in formatted transcripts but are never speaker names — per the
+# transcript-formatter agent spec, speaker labels are always First+Last, never a
+# bare generic word like "Status".
+#
+# Single source of truth: content_builder imports this to build its
+# trailing-metadata regex. Keep it a tuple — order is load-bearing there, where
+# the labels become a regex alternation and a longer label must precede any
+# prefix of itself ("Date Processed" before "Date") or the shorter one wins.
+METADATA_LABELS = (
+    "Status", "Duration", "Episode", "Guest", "Guests", "Hosts", "Host",
+    "Project", "Program", "Date Processed", "Date", "Title", "Season",
+    "Chapters", "Transcript", "Formatted Transcript",
+)
+
 # Metadata keys that look like "Key: value" but are not speaker turns.
-_METADATA_KEYS = {
-    "duration", "episode", "guest", "guests", "hosts", "host", "status",
-    "project", "program", "date", "date processed", "title", "season",
-    "chapters", "transcript", "formatted transcript",
-}
+_METADATA_KEYS = frozenset(label.lower() for label in METADATA_LABELS)
 
 # Minimum normalized-key length for a turn to participate in alignment.
 # Short lines ("Yeah.", "Right.") collide across a transcript and would produce

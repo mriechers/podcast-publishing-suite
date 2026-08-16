@@ -211,7 +211,9 @@ class GhostClient:
 
         if response.status_code == 401:
             raise GhostAPIError(
-                "Authentication failed. Check your API key.",
+                "Ghost authentication failed (401 Unauthorized). Check "
+                "GHOST_ADMIN_API_KEY — the integration may have been "
+                "regenerated or revoked in Ghost Admin.",
                 status_code=401,
                 response_body=body,
             )
@@ -684,13 +686,29 @@ class GhostClient:
     def test_connection(self) -> bool:
         """Test the API connection and authentication.
 
+        Uses GET /posts/?limit=1 rather than /site/. Ghost's /site/ endpoint
+        does not require authentication — verified empirically (Ghost v6.55)
+        it returns HTTP 200 for a bogus key and even with no Authorization
+        header at all. That made this check a false green: `test-connection`
+        would report success while the Admin API key was completely dead,
+        and the failure only surfaced mid-import. /posts/ is a genuinely
+        authenticated endpoint, so a bad key surfaces here instead.
+
+        Deliberately NOT /users/me/: Ghost integration keys (as opposed to
+        user keys) have no associated user, so a perfectly valid integration
+        key gets a 404 "cannot read user" there — that would be a false red
+        for the exact kind of key this project uses.
+
         Returns:
             True if connection is successful.
 
         Raises:
-            GhostAPIError: If connection fails.
+            GhostAPIError: If connection fails. 401s get an actionable
+                message (see _handle_response) naming GHOST_ADMIN_API_KEY;
+                network/DNS failures surface via _request_with_retry with
+                no status_code set, so they're distinguishable from a bad key.
         """
-        url = f"{self.api_url}/site/"
+        url = f"{self.api_url}/posts/?limit=1"
 
         logger.debug(f"Testing connection: GET {url}")
 
