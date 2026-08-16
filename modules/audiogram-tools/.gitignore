@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+output/
+
+# Remotion
+.remotion/
+
+# Environment
+.env
+.env.local
+
+# YouTube credentials (sensitive!)
+.youtube-token.json
+.youtube-credentials.json
+
+# Queue state
+.render-queue.json
+
+# Processed audio
+input/processed/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Large binary source files (AE project, rendered video)
+*.aep
+*.mp4
+
+# Extracted frames (development artifacts)
+frames/
+
+# Playwright screenshots (development artifacts)
+.playwright-mcp/
+
+# Claude Code
+.claude/
+
+# Watch folder contents (audio dropped here at runtime)
+watch/*.mp3
+watch/*.wav
+watch/*.m4a
