@@ -7,11 +7,11 @@ episode, a show's content, a station's workflow) go to that organization's own t
 has one; Wonder Cabinet Productions keeps its own. Use the `gh` CLI for all operations.
 
 **Single repo, no submodules.** Module code lives inline under `modules/<name>/` in this
-repository; the standalone module repos were archived on 2026-08-15. There is no per-module
-repo to file against. Issues carried over from the archived repos keep a `module: *` label
+repository, imported via `git subtree`. The standalone module repos are retired — there is no
+per-module repo to file against. Issues carried over from them keep a `module: *` label
 recording where they came from.
 
-**Existing label vocabulary.** This repo already uses `type: *`, `executor: *`, `priority: *`, `review: *`, and `agent-discovered`. Those are orthogonal to the triage-state labels in `triage-labels.md` — apply both, don't substitute one for the other.
+**Existing label vocabulary.** This repo uses `type: *`, `executor: *`, `priority: *`, `module: *`, and `agent-discovered`. Those are orthogonal to the triage-state labels in `triage-labels.md` — apply both, don't substitute one for the other.
 
 ## Conventions
 

@@ -83,8 +83,8 @@ cd frontend && uvicorn api.main:app --reload       # FastAPI dev server
 - **Never force-push master** — current module iterations are in production
 - **Feature work on branches** — always branch from master for structural changes
 - **Modules are inline** — `modules/<name>/` is ordinary source in this repo, imported via
-  `git subtree` on 2026-08-15. There are no submodules and no `.gitmodules`; the former module
-  repos are archived read-only. Do not re-extract a module into its own repo.
+  `git subtree`. There are no submodules and no `.gitmodules`; the standalone module repos are
+  retired and no longer the source of truth. Do not re-extract a module into its own repo.
 - **Naming**: "Podbridge" was an earlier editorial-assistant repurposing (archived in `reference/`). "Cardigan" refers to the PBS Wisconsin project — do not conflate them
 - **Show configs**: `shows/<slug>/` is the source of truth for per-show settings. `config.json` for service config, `brand.json` for visual identity, `assets/` for images. Modules should read from here rather than hardcoding values
 - **Module design docs**: each module should have `docs/MODULE_DESIGN.md` following the template at `docs/MODULE_DESIGN_TEMPLATE.md`
