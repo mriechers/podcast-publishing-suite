@@ -69,7 +69,8 @@ These are slash commands tracked in this repo — `.gitignore` excludes `.claude
 
 ```bash
 # Clone — modules are inline source, no submodule init needed
-git clone git@github.com:public-media-work/podcast-publishing-suite.git
+# Base repo — organization forks clone their own fork instead
+git clone git@github.com:mriechers/podcast-publishing-suite.git
 
 # Frontend development
 cd frontend/web && npm install && npm run dev     # React dev server
