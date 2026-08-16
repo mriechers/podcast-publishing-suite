@@ -210,7 +210,54 @@ def format_episode_links(description_html: str) -> str:
             '<!--kg-card-end: html-->'
         )
 
-    return ul_pattern.sub(transform_list, description_html)
+    formatted = ul_pattern.sub(transform_list, description_html)
+    return strip_redundant_links_heading(formatted)
+
+
+# Matches a producer-typed "Links" label sitting immediately above a links list:
+# <p><strong>Links:</strong></p>, <p>Links</p>, <h3>LINKS:</h3>, &nbsp; padding, etc.
+_REDUNDANT_LINKS_HEADING_RE = re.compile(
+    r'<(?P<block>p|h[1-6])[^>]*>'          # opening block tag
+    r'(?:\s|&nbsp;)*'
+    r'(?:<(?P<inline>strong|b|em|i)[^>]*>)?'   # optional inline emphasis
+    r'(?:\s|&nbsp;)*'
+    r'links?'                               # "Link" / "Links", any case
+    r'(?:\s|&nbsp;)*:?(?:\s|&nbsp;)*'       # optional colon
+    r'(?:</(?P=inline)>)?'
+    r'(?:\s|&nbsp;)*'
+    r'</(?P=block)>'
+    r'\s*'
+    r'(?=<!--kg-card-begin: html-->\s*<ul class="wc-episode-notes-content-links">)',
+    re.IGNORECASE,
+)
+
+
+def strip_redundant_links_heading(html_str: str) -> str:
+    """Drop a producer-typed "Links:" label that sits above the links list.
+
+    The WC-Episode theme generates the section heading itself, in CSS:
+
+        .wc-episode-notes-content .wc-episode-notes-content-links::before {
+            content: "Links";
+            text-transform: uppercase;
+        }
+
+    So when a producer also types "Links:" above the list in the PRX episode
+    description — which reads as the natural thing to do, and looks correct in
+    Dovetail — the published post shows the heading twice.
+
+    Only a label directly adjacent to a list that was actually tagged
+    `wc-episode-notes-content-links` is removed. A "Links:" heading above an
+    ordinary bulleted list is left alone, because nothing is generating a
+    duplicate heading for it.
+
+    Args:
+        html_str: Description HTML, already passed through ``format_episode_links``.
+
+    Returns:
+        HTML with the redundant heading removed.
+    """
+    return _REDUNDANT_LINKS_HEADING_RE.sub('', html_str)
 
 
 # =============================================================================

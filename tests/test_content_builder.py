@@ -393,3 +393,54 @@ class TestPublishedAtHandling:
         ep = self._make_episode(datetime(2025, 7, 8, 14, 30, 0, tzinfo=edt))
         post = build_ghost_post(ep, primary_tag="Wonder Cabinet")
         assert post.published_at == "2025-07-08T18:30:00.000Z"
+
+
+class TestRedundantLinksHeading:
+    """A producer-typed "Links:" label above the links list must be dropped.
+
+    The WC-Episode theme generates that heading itself in CSS
+    (`.wc-episode-notes-content-links::before { content: "Links" }`), so a
+    typed one renders the heading twice. Typing it is the natural thing to do
+    and looks correct in Dovetail, so this is expected to recur.
+    """
+
+    LIST = '<ul><li><a href="https://example.com">A Book</a></li></ul>'
+
+    @pytest.mark.parametrize(
+        "heading",
+        [
+            "<p><strong>Links:</strong></p>",   # the shape WC E20 shipped with
+            "<p>Links:</p>",
+            "<p>Links</p>",
+            "<h3>LINKS:</h3>",
+            "<p><strong>&nbsp;Links:&nbsp;</strong></p>",
+            "<p><b>Link:</b></p>",
+        ],
+    )
+    def test_strips_heading_above_links_list(self, heading: str) -> None:
+        out = format_episode_links(f"<p>Intro.</p>{heading}{self.LIST}")
+        assert "Links:" not in out
+        assert "Link:" not in out
+        assert ">Links<" not in out
+        # the list itself still gets formatted
+        assert 'class="wc-episode-notes-content-links"' in out
+        assert "A Book" in out
+        assert "<p>Intro.</p>" in out
+
+    def test_keeps_heading_above_non_link_list(self) -> None:
+        """Nothing generates a duplicate heading for a plain bulleted list."""
+        html_str = '<p><strong>Links:</strong></p><ul><li>no url here</li></ul>'
+        out = format_episode_links(html_str)
+        assert "Links:" in out
+        assert 'class="wc-episode-notes-content-links"' not in out
+
+    def test_keeps_heading_separated_from_list(self) -> None:
+        """Only a label directly adjacent to the list is redundant."""
+        out = format_episode_links(
+            f"<p><strong>Links:</strong></p><p>Other text.</p>{self.LIST}"
+        )
+        assert "Links:" in out
+
+    def test_leaves_unrelated_headings_alone(self) -> None:
+        out = format_episode_links(f"<p><strong>Guests:</strong></p>{self.LIST}")
+        assert "Guests:" in out
