@@ -21,6 +21,14 @@
 
 Where a module has a real test suite, running it green after inlining *is* the test. Today changes location, not behavior, so any new failure is an inlining defect — never "fix" it by editing module source.
 
+**How to verify a subtree import actually preserved history.** `git subtree add` grafts the module's history onto this repo *without rewriting paths* — the imported commits still touch `markbot.py`, not `modules/markbot/markbot.py`. So `git log -- modules/<name>` shows only the two or three commits that touched that path *in this repo*, and looks like the history was lost when it wasn't. Do not use it as the test. The real test is whether the module's upstream tip is an ancestor of `HEAD`:
+
+```bash
+git merge-base --is-ancestor <upstream-tip-sha> HEAD && echo "history grafted" || echo "HISTORY MISSING"
+```
+
+Get `<upstream-tip-sha>` from the `Add 'modules/<name>/' from commit '<sha>'` message that `subtree add` writes. A second confirmation is that `git rev-list --count HEAD` grew by roughly the module's commit count.
+
 ## Global Constraints
 
 - Base repo is `mriechers/podcast-publishing-suite` (public, `main`). All issues live here.
@@ -628,12 +636,14 @@ git subtree add --prefix=modules/audiogram-tools \
 - [ ] **Step 5: Verify postcondition — history arrived and content is close to the snapshot**
 
 ```bash
-git log --oneline -- modules/audiogram-tools | wc -l          # expect ~38, not 1
+SHA=$(git log -1 --format=%s | sed -E "s/.*from commit '([0-9a-f]+)'.*/\1/")
+git merge-base --is-ancestor "$SHA" HEAD && echo "history grafted" || echo "HISTORY MISSING"
+git rev-list --count HEAD            # should have grown by ~38
 git ls-tree -r HEAD --name-only -- modules/audiogram-tools | sort > /tmp/after-audiogram.txt
 diff /tmp/before-audiogram.txt /tmp/after-audiogram.txt
 ```
 
-A commit count near 38 confirms real history. **Read the diff rather than skimming it.** Files present before but absent after mean the snapshot carried local edits that were never pushed upstream — recover them from the Task 1 mirror before continuing. Files added are expected: upstream moved since the snapshot.
+"history grafted" plus a commit-count jump of roughly 38 confirms real history. Do **not** use `git log -- modules/audiogram-tools` as the check — see "How to verify a subtree import" above; it undercounts by design and makes a correct import look failed. **Read the diff rather than skimming it.** Files present before but absent after mean the snapshot carried local edits that were never pushed upstream — recover them from the Task 1 mirror before continuing. Files added are expected: upstream moved since the snapshot.
 
 - [ ] **Step 6: Verify the module still builds**
 
@@ -768,12 +778,14 @@ git subtree add --squash --prefix=modules/podcast-whisper-transcription \
 - [ ] **Step 5: Verify postcondition**
 
 ```bash
-git log --oneline -- modules/podcast-whisper-transcription | wc -l
+SHA=$(git log -1 --format=%s | sed -E "s/.*from commit '([0-9a-f]+)'.*/\1/")
+git merge-base --is-ancestor "$SHA" HEAD 2>/dev/null && echo "full history grafted" || echo "squashed (no upstream ancestry)"
+git rev-list --count HEAD
 git ls-tree -r HEAD --name-only -- modules/podcast-whisper-transcription | sort > /tmp/after-whisper.txt
 diff /tmp/before-whisper.txt /tmp/after-whisper.txt
 ```
 
-Expected: ~19 commits under a **clean** verdict, 1–2 under **not-clean**. A count near 19 when the verdict was not-clean means `--squash` was forgotten — **reset the branch and redo it before pushing**, because pushing publishes the history the audit rejected.
+Expected under **clean**: "full history grafted", commit count up ~19. Expected under **not-clean**: "squashed", commit count up by 1–2. Getting "full history grafted" when the verdict was not-clean means `--squash` was forgotten — **reset the branch and redo it before pushing**, because pushing publishes the history the audit rejected. Do not use `git log -- modules/…` here; see "How to verify a subtree import" above.
 
 - [ ] **Step 6: Run the module's tests**
 
@@ -850,12 +862,14 @@ git subtree add --squash --prefix=modules/prx-to-ghost-publisher \
 - [ ] **Step 5: Verify postcondition**
 
 ```bash
-git log --oneline -- modules/prx-to-ghost-publisher | wc -l
+SHA=$(git log -1 --format=%s | sed -E "s/.*from commit '([0-9a-f]+)'.*/\1/")
+git merge-base --is-ancestor "$SHA" HEAD 2>/dev/null && echo "full history grafted" || echo "squashed (no upstream ancestry)"
+git rev-list --count HEAD
 git ls-tree -r HEAD --name-only -- modules/prx-to-ghost-publisher | sort > /tmp/after-prx.txt
 diff /tmp/before-prx.txt /tmp/after-prx.txt
 ```
 
-Expected: ~68 commits under **clean**, 1–2 under **not-clean**. The diff should show upstream additions since the snapshot, including whatever Task 2 merged. As in Task 9, a full history under a not-clean verdict means stop and redo before pushing.
+Expected under **clean**: "full history grafted", commit count up ~68. Under **not-clean**: "squashed", up by 1–2. The file diff should show upstream additions since the snapshot, including whatever Task 2 merged. As in Task 9, full history under a not-clean verdict means stop and redo before pushing. Do not use `git log -- modules/…` here.
 
 - [ ] **Step 6: Run the module's test suite — 11 test files, the largest in the repo**
 
@@ -965,21 +979,38 @@ episode, a show's content, a station's workflow) go to that organization's own t
 has one; Wonder Cabinet Productions keeps its own. Use the `gh` CLI for all operations.
 ```
 
-Then replace the line-18 paragraph (`**Always pass --repo …**`) with:
+Then replace this line, which currently sits alone above the `## Pull requests` heading:
 
 ```markdown
-**Always pass `--repo` explicitly.** The base repo is not necessarily a remote of the clone you
-are standing in — a fork's `origin` points at the fork, and `gh` will infer that instead. Pass
+Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
+```
+
+with:
+
+```markdown
+**Always pass `--repo` explicitly. Never let `gh` infer it.** The base repo is not necessarily a
+remote of the clone you are standing in — a fork's `origin` points at the fork, and `gh` resolves
+to that instead, so an inferred call files into the wrong repo and reports success. Pass
 `--repo mriechers/podcast-publishing-suite` for code issues.
 ```
 
-And in `CLAUDE.md`, replace the `### Issue tracker` line under `## Agent skills`:
+That inference instruction is wrong twice over: it was already wrong before this migration (the tracker was never any of this clone's remotes), and the migration moves the tracker again. Do not leave it.
+
+And in `CLAUDE.md`, replace this line under `## Agent skills` → `### Issue tracker`:
+
+```markdown
+GitHub Issues on `Wonder-Cabinet-Productions/podcast-publishing-suite`, via the `gh` CLI — module-specific work is filed on the module's own repo. See `docs/agents/issue-tracker.md`.
+```
+
+with:
 
 ```markdown
 Code issues go to the base repo `mriechers/podcast-publishing-suite` via the `gh` CLI — always
 pass `--repo` explicitly. Organization-specific operational issues go to that org's own tracker.
 See `docs/agents/issue-tracker.md`.
 ```
+
+**Match these strings exactly as they appear in the files.** If a target string is not found, stop and report rather than guessing at a substitute — the file may have changed since this plan was written.
 
 - [ ] **Step 3: Correct `CLAUDE.md`**
 
@@ -1257,7 +1288,7 @@ Expected: `true` four times, and the mirror backups still present. **Keep the ba
 
 Mapping to the spec's "Today" verification:
 
-- [ ] Each module directory shows real history (`git log --oneline modules/<name>`), except where Task 3 chose `--squash`
+- [ ] Each module's upstream tip is an ancestor of `HEAD` (`git merge-base --is-ancestor <sha> HEAD`), except where Task 3 chose `--squash`
 - [ ] `git clone --recurse-submodules` of WCP succeeds
 - [ ] No `.gitmodules` in any of the three repos
 - [ ] All cleared issues reachable on base; PRs #55 and #44 merged or closed before archival
