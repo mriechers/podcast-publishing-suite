@@ -64,10 +64,20 @@ Nothing later in this plan is safely reversible without this. Mirror clones capt
 
 Several clones of this project exist across `~/Developer` and `~/developer`. Confirm none holds commits that exist nowhere else.
 
+**Do not test for a `.git` directory.** In a submodule checkout `.git` is a *file* (a gitlink), so `[ -d "$m/.git" ]` silently skips every submodule — which is exactly where this project's unpushed work lives. Probe with git itself:
+
 ```bash
 for d in ~/Developer/podcast-publishing-suite ~/Developer/wonder-cabinet/podcast-publishing-suite ~/Developer/pbswi/podcast-publishing-suite; do
+  # the metarepo itself, not just its modules
+  git -C "$d" rev-parse --git-dir >/dev/null 2>&1 && {
+    echo "--- $d (metarepo)"
+    git -C "$d" status --porcelain
+    git -C "$d" log --branches --not --remotes --oneline
+  }
   for m in "$d"/modules/*/; do
-    [ -d "$m/.git" ] || continue
+    git -C "$m" rev-parse --show-toplevel >/dev/null 2>&1 || continue
+    # skip dirs with no own .git — git walks up and reports the PARENT's state, a false positive
+    [ -e "$m/.git" ] || continue
     echo "--- $m"
     git -C "$m" status --porcelain
     git -C "$m" log --branches --not --remotes --oneline
@@ -75,7 +85,9 @@ for d in ~/Developer/podcast-publishing-suite ~/Developer/wonder-cabinet/podcast
 done
 ```
 
-Expected: no output under any heading. Any commit listed by the `--not --remotes` line exists only on this disk — push it to its module repo before continuing.
+Expected: no output under any heading. Any commit listed by a `--not --remotes` line exists **only on this disk** — it is in no GitHub repo, therefore in no mirror backup, and Task 16 archives the repo read-only so it can never be pushed afterward. Push it, or get an explicit decision to abandon it, before continuing.
+
+Two traps this version avoids: a `modules/<name>/` with no `.git` at all makes `git -C` walk up and report the *parent* repo's state as if it were the module's; and `~/Developer` and `~/developer` are the same directory on this case-insensitive filesystem, so duplicate paths are expected and are not findings.
 
 - [ ] **Step 2: Take mirror backups**
 
@@ -92,10 +104,12 @@ git clone --mirror git@github.com:Wonder-Cabinet-Productions/podcast-publishing-
 
 ```bash
 cd ~/backups/2026-08-15-module-repos
-for g in *.git; do echo "$g: $(git -C "$g" rev-list --all --count) commits, $(git -C "$g" for-each-ref --format='%(refname)' | wc -l) refs"; done
+for g in *.git; do echo "$g: $(git -C "$g" rev-list refs/heads/main --count 2>/dev/null || git -C "$g" rev-list refs/heads/master --count) on main, $(git -C "$g" rev-list --all --count) all refs"; done
 ```
 
-Expected, matching the audit: `podcast-audiogram-tools` 38 commits, `markbot` 15, `podcast-whisper-transcription` 19, `prx-to-ghost-publisher` 68. `wcp.git` non-zero. A zero anywhere means the clone failed silently — re-run it.
+Expected on main, matching the audit: `podcast-audiogram-tools` 38, `markbot` 15, `podcast-whisper-transcription` 19, `prx-to-ghost-publisher` 68. `wcp.git` non-zero (it uses `master`).
+
+**Compare against the main-only column, not the all-refs column.** A mirror also captures GitHub's `refs/pull/*` refs, so the all-refs count runs higher wherever a repo has open PRs — 41 and 85 for the two above. Higher is correct and means the mirror is more complete than the baseline. A count *below* the expected main-only value, or a zero anywhere, means the clone failed — re-run it.
 
 - [ ] **Step 4: Create the working branch from base, not from the fork**
 
@@ -118,6 +132,72 @@ git add docs/superpowers/specs/2026-08-15-generalized-base-fork-topology-design.
         docs/superpowers/plans/2026-08-15-inline-modules-and-wire-repos.md
 git commit -m "docs: design + plan for inlining modules and wiring related repos"
 ```
+
+---
+
+### Task 1b: Consolidate module repo ownership under `mriechers`
+
+Three of the four module repos were transferred to the `Wonder-Cabinet-Productions` org at some
+point; `gh` silently followed redirects during planning, so every repo name elsewhere in this
+plan reads `mriechers/*` while the canonical owner is the org.
+
+This matters because **GitHub only transfers issues between repos owned by the same user or
+org.** Base is `mriechers/podcast-publishing-suite`, so leaving the modules org-owned blocks 63
+of the 72 issues in Task 6. Moving them under `mriechers` first unblocks the transfer and makes
+every existing `mriechers/*` reference in this plan literally correct.
+
+These repos are archived in Task 16 regardless, so losing org-team access to them is temporary
+and inconsequential.
+
+**Files:** none.
+
+**Interfaces:**
+- Produces: all four module repos owned by `mriechers`, consumed by Tasks 6, 7, 9, 10, 16
+
+- [ ] **Step 1: Verify precondition — confirm the actual owners**
+
+```bash
+for r in podcast-audiogram-tools markbot podcast-whisper-transcription prx-to-ghost-publisher; do
+  echo -n "mriechers/$r → "; gh api "repos/mriechers/$r" --jq .full_name
+done
+```
+
+Expected: the first, third and fourth resolve to `Wonder-Cabinet-Productions/*`; `markbot`
+resolves to `mriechers/markbot` and is **left alone** — it is genuinely personal. A stale
+3-commit `Wonder-Cabinet-Productions/markbot` stub also exists and is not touched.
+
+- [ ] **Step 2: Transfer the three org-owned repos**
+
+```bash
+for r in podcast-audiogram-tools podcast-whisper-transcription prx-to-ghost-publisher; do
+  gh api -X POST "repos/Wonder-Cabinet-Productions/$r/transfer" -f new_owner=mriechers
+done
+```
+
+Issues, PRs, and history travel with the repo. Visibility is preserved — the two private repos
+stay private.
+
+- [ ] **Step 3: Verify postcondition**
+
+```bash
+for r in podcast-audiogram-tools markbot podcast-whisper-transcription prx-to-ghost-publisher; do
+  echo -n "$r: "; gh api "repos/mriechers/$r" --jq '.full_name + "  private=" + (.private|tostring)'
+done
+```
+
+Expected: all four now report `mriechers/*`, with `podcast-whisper-transcription` and
+`prx-to-ghost-publisher` still `private=true`. **If any still reports the org, stop** — Task 6
+will silently fail for that repo's issues.
+
+- [ ] **Step 4: Confirm issue counts survived the move**
+
+```bash
+for r in podcast-audiogram-tools markbot podcast-whisper-transcription prx-to-ghost-publisher; do
+  echo -n "$r open: "; gh issue list --repo "mriechers/$r" --state open --limit 100 --json number --jq 'length'
+done
+```
+
+Expected: 11, 9, 5, 28 — unchanged from planning.
 
 ---
 
@@ -380,7 +460,22 @@ gh label create "executor: agent"   --repo $R --color 5319e7 --description "Best
 gh label create agent-discovered    --repo $R --color f9d0c4 --description "Discovered by an AI agent during work"
 ```
 
-`wontfix` already exists on base and is reused as-is.
+- [ ] **Step 2b: Create the labels the incoming issues actually carry**
+
+The set above is the vocabulary this repo *documents*. These five are additionally **in active use** on the 72 issues being transferred, verified by counting labels attached to live issues. Without them, `gh issue transfer` strips them — `priority: normal` alone is on 18 issues.
+
+```bash
+R=mriechers/podcast-publishing-suite
+gh label create "priority: normal" --repo $R --color 008672 --description "Normal priority"     # 18 issues
+gh label create "priority: high"   --repo $R --color b60205 --description "High priority"       # 4 issues
+gh label create "type: maintenance" --repo $R --color fef2c0 --description "Upkeep, deps, chores" # 3 issues
+gh label create "priority: low"    --repo $R --color c2e0c6 --description "Enhancement, nice-to-have" # 2 issues
+gh label create "executor: either" --repo $R --color d4c5f9 --description "Agent or human"      # 1 issue
+```
+
+`bug`, `enhancement`, `documentation`, `question`, and `wontfix` are also in use and **already exist** on base — reused as-is, nothing to create.
+
+`review:*` and `ship:*` exist on some source repos but are attached to no issue (they are PR labels), so they are deliberately not recreated here.
 
 - [ ] **Step 3: Create one origin label per module so transferred issues stay findable**
 
@@ -438,7 +533,16 @@ label_all podcast-whisper-transcription "module: whisper"
 label_all prx-to-ghost-publisher "module: prx-to-ghost"
 ```
 
-If a label does not exist on the *source* repo, `gh issue edit` fails — create it there first with `gh label create`.
+**No source repo has any `module:` label** — verified against all four. So create each one at its own source repo first, or every `gh issue edit` above fails:
+
+```bash
+gh label create "module: audiogram-tools" --repo mriechers/podcast-audiogram-tools --color c5def5 --description "Originated here"
+gh label create "module: markbot"         --repo mriechers/markbot --color c5def5 --description "Originated here"
+gh label create "module: whisper"         --repo mriechers/podcast-whisper-transcription --color c5def5 --description "Originated here"
+gh label create "module: prx-to-ghost"    --repo mriechers/prx-to-ghost-publisher --color c5def5 --description "Originated here"
+```
+
+Label names must match Task 5's `module:` labels on base exactly, or the transfer drops them.
 
 - [ ] **Step 3: Transfer the two public repos in full**
 
