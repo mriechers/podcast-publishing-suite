@@ -1,6 +1,6 @@
 # podcast-publishing-suite
 
-A meta-repository for the podcast publishing pipeline at Wonder Cabinet Productions. Each module handles a stage in the workflow — from transcription through web publishing to social distribution.
+An agentic publishing pipeline for semi-autonomous multi-platform publishing of podcast episodes week to week. Tailored to each podcast's publishing stack, but benefiting from what each show learns and the common structures shared by all podcasts. 
 
 ## Pipeline
 
